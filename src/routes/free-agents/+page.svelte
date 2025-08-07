@@ -478,7 +478,7 @@
 
 <div class="container">
   <div class="header">
-    <h1 class="main-title">Free Agent Market - test</h1>
+    <h1 class="main-title">Free Agent Market</h1>
     <p class="subtitle">Discover top available talent for your fantasy roster</p>
   </div>
 
