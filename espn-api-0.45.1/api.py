@@ -54,10 +54,10 @@ def get_free_agents():
             "status": p.active_status,
             "stats": p.stats.get(0, {})
         }
-        for p in free_agents[:10]
+        for p in free_agents[:50]
     ]
 
-def get_free_agents_by_position(position: str, size: int = 10):
+def get_free_agents_by_position(position: str, size: int = 25):
     league = League(league_id=LEAGUE_ID, year=YEAR)
     free_agents = league.free_agents(position=position, size=size)
 
