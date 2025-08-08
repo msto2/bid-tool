@@ -1,8 +1,50 @@
 <script>
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
+
   // @ts-ignore
   export let data;
   const {freeAgentsByPosition} = data;
   const positions = Object.keys(freeAgentsByPosition);
+
+  let signedInTeam = null;
+
+  onMount(() => {
+    // Check if user is signed in
+    if (browser) {
+      const savedTeam = localStorage.getItem('signedInTeam');
+      if (!savedTeam) {
+        goto('/');
+        return;
+      }
+      
+      try {
+        signedInTeam = JSON.parse(savedTeam);
+        // Check if authentication is still valid (optional: add expiration)
+        const signedInAt = signedInTeam.signedInAt;
+        const now = Date.now();
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        
+        if (now - signedInAt > maxAge) {
+          localStorage.removeItem('signedInTeam');
+          goto('/');
+          return;
+        }
+      } catch (error) {
+        localStorage.removeItem('signedInTeam');
+        goto('/');
+        return;
+      }
+    }
+  });
+
+  function handleSignOut() {
+    if (browser) {
+      localStorage.removeItem('signedInTeam');
+      goto('/');
+    }
+  }
 
   const statLabelsPassing = {
     passingCompletions: "Passing Completions",
@@ -97,6 +139,7 @@
   .header {
     text-align: center;
     margin-bottom: 2rem;
+    position: relative;
   }
 
   .main-title {
@@ -114,6 +157,56 @@
     color: #94a3b8;
     font-size: 0.95rem;
     font-weight: 500;
+  }
+
+  .user-info {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(30, 41, 59, 0.9);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .team-name {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .sign-out-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .sign-out-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    .user-info {
+      position: static;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
   }
 
   .section-title {
@@ -478,6 +571,15 @@
 
 <div class="container">
   <div class="header">
+    {#if signedInTeam}
+      <div class="user-info">
+        <span class="team-name">{signedInTeam.name}</span>
+        <button class="sign-out-btn" on:click={handleSignOut}>
+          Sign Out
+        </button>
+      </div>
+    {/if}
+    
     <h1 class="main-title">Free Agent Market</h1>
     <p class="subtitle">Discover top available talent for your fantasy roster</p>
   </div>

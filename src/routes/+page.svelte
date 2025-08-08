@@ -1,11 +1,119 @@
 <script>
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
+  import { contacts } from '$lib/data/contacts.js';
+
   export let data;
   const { teams } = data;
 
-  function handleSignIn(teamName) {
-    // For now, just log the team selection
-    console.log(`Sign in requested for team: ${teamName}`);
-    alert(`Sign in functionality for ${teamName} will be implemented here`);
+  let showSignInModal = false;
+  let selectedTeam = null;
+  let signInStep = 'choose'; // 'choose', 'code', 'success'
+  let authMethod = 'email'; // 'email' or 'sms'
+  let verificationCode = '';
+  let inputCode = '';
+  let isLoading = false;
+  let errorMessage = '';
+
+  onMount(() => {
+    // Check if user is already signed in
+    if (browser) {
+      const savedTeam = localStorage.getItem('signedInTeam');
+      if (savedTeam) {
+        goto('/free-agents');
+      }
+    }
+  });
+
+  function handleTeamClick(team) {
+    selectedTeam = team;
+    showSignInModal = true;
+    signInStep = 'choose';
+    errorMessage = '';
+  }
+
+  function closeModal() {
+    showSignInModal = false;
+    selectedTeam = null;
+    signInStep = 'choose';
+    authMethod = 'email';
+    verificationCode = '';
+    inputCode = '';
+    errorMessage = '';
+    isLoading = false;
+  }
+
+  async function sendVerificationCode() {
+    if (!selectedTeam || !contacts[selectedTeam.id]) {
+      errorMessage = 'Team contact information not found';
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = '';
+
+    try {
+      const contact = contacts[selectedTeam.id];
+      const response = await fetch('/api/send-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: selectedTeam.id,
+          method: authMethod,
+          email: contact.email,
+          phone: contact.phone
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        verificationCode = result.code; // In development, show the code
+        signInStep = 'code';
+      } else {
+        errorMessage = result.error || 'Failed to send verification code';
+      }
+    } catch (error) {
+      errorMessage = 'Network error. Please try again.';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function verifyCode() {
+    if (inputCode !== verificationCode) {
+      errorMessage = 'Invalid verification code';
+      return;
+    }
+
+    // Store authentication in localStorage
+    if (browser) {
+      localStorage.setItem('signedInTeam', JSON.stringify({
+        id: selectedTeam.id,
+        name: selectedTeam.team_name,
+        signedInAt: Date.now()
+      }));
+    }
+
+    signInStep = 'success';
+    
+    // Redirect after a brief delay
+    setTimeout(() => {
+      goto('/free-agents');
+    }, 1500);
+  }
+
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+      if (signInStep === 'choose') {
+        sendVerificationCode();
+      } else if (signInStep === 'code') {
+        verifyCode();
+      }
+    }
   }
 </script>
 
@@ -167,6 +275,220 @@
     border: 1px solid rgba(148, 163, 184, 0.2);
   }
 
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal {
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+  }
+
+  .modal-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-subtitle {
+    color: #94a3b8;
+    font-size: 0.9rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-method-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-method-btn {
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .auth-method-btn.active {
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    color: white;
+    border-color: #3b82f6;
+  }
+
+  .auth-method-btn:hover:not(.active) {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(148, 163, 184, 0.5);
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-align: center;
+    font-family: monospace;
+    letter-spacing: 0.5rem;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    color: white;
+    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-secondary {
+    background: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(148, 163, 184, 0.3);
+    color: #e2e8f0;
+  }
+
+  .error-message {
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+
+  .success-message {
+    text-align: center;
+    color: #10b981;
+  }
+
+  .success-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .dev-code {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin: 1rem 0;
+    text-align: center;
+    font-family: monospace;
+    font-size: 1.2rem;
+    letter-spacing: 0.2rem;
+    color: #3b82f6;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px) scale(0.95); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0) scale(1); 
+    }
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
   /* Mobile optimizations */
   @media (max-width: 640px) {
     .container {
@@ -196,6 +518,16 @@
       width: 100%;
       padding: 1rem;
     }
+
+    .modal {
+      margin: 1rem;
+      max-width: none;
+      width: calc(100% - 2rem);
+    }
+
+    .auth-method-buttons {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
@@ -209,7 +541,7 @@
   {#if teams && teams.length > 0}
     <div class="teams-grid">
       {#each teams as team}
-        <button class="team-card" on:click={() => handleSignIn(team.team_name)}>
+        <button class="team-card" on:click={() => handleTeamClick(team)}>
           <div class="team-header">
             <div>
               <h2 class="team-name">{team.team_name} {team.id}</h2>
@@ -234,3 +566,123 @@
     </div>
   {/if}
 </div>
+
+<!-- Sign In Modal -->
+{#if showSignInModal && selectedTeam}
+  <div class="modal-overlay" on:click={closeModal}>
+    <div class="modal" on:click|stopPropagation on:keydown={handleKeyPress}>
+      
+      {#if signInStep === 'choose'}
+        <div class="modal-header">
+          <div class="modal-title">Sign In</div>
+          <div class="modal-subtitle">{selectedTeam.team_name}</div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">Choose verification method:</div>
+          <div class="auth-method-buttons">
+            <button 
+              class="auth-method-btn {authMethod === 'email' ? 'active' : ''}"
+              on:click={() => authMethod = 'email'}
+            >
+              📧 Email
+            </button>
+            <button 
+              class="auth-method-btn {authMethod === 'sms' ? 'active' : ''}"
+              on:click={() => authMethod = 'sms'}
+            >
+              📱 SMS
+            </button>
+          </div>
+        </div>
+
+        {#if contacts[selectedTeam.id]}
+          <div class="form-group">
+            <div class="form-label">
+              Code will be sent to:
+            </div>
+            <div style="color: #06b6d4; font-weight: 500;">
+              {#if authMethod === 'email'}
+                {contacts[selectedTeam.id].email}
+              {:else}
+                {contacts[selectedTeam.id].phone}
+              {/if}
+            </div>
+          </div>
+        {/if}
+
+        <div class="modal-actions">
+          <button 
+            class="btn btn-primary" 
+            on:click={sendVerificationCode}
+            disabled={isLoading}
+          >
+            {#if isLoading}
+              <div class="spinner"></div>
+              Sending...
+            {:else}
+              Send Code
+            {/if}
+          </button>
+          <button class="btn btn-secondary" on:click={closeModal}>Cancel</button>
+        </div>
+
+      {:else if signInStep === 'code'}
+        <div class="modal-header">
+          <div class="modal-title">Enter Verification Code</div>
+          <div class="modal-subtitle">
+            Code sent to {authMethod === 'email' ? 'email' : 'SMS'}
+          </div>
+        </div>
+
+        {#if verificationCode}
+          <div class="dev-code">
+            Dev Code: {verificationCode}
+          </div>
+        {/if}
+
+        <div class="form-group">
+          <div class="form-label">Verification Code:</div>
+          <input 
+            class="form-input" 
+            type="text" 
+            bind:value={inputCode}
+            placeholder="######"
+            maxlength="6"
+            on:keydown={handleKeyPress}
+            autofocus
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button 
+            class="btn btn-primary" 
+            on:click={verifyCode}
+            disabled={!inputCode || inputCode.length < 4}
+          >
+            Verify
+          </button>
+          <button class="btn btn-secondary" on:click={() => signInStep = 'choose'}>
+            Back
+          </button>
+        </div>
+
+      {:else if signInStep === 'success'}
+        <div class="success-message">
+          <div class="success-icon">✅</div>
+          <div class="modal-title">Welcome!</div>
+          <div class="modal-subtitle">
+            Signed in as {selectedTeam.team_name}
+          </div>
+          <p style="margin-top: 1rem; color: #94a3b8;">
+            Redirecting to free agents...
+          </p>
+        </div>
+      {/if}
+
+      {#if errorMessage}
+        <div class="error-message">{errorMessage}</div>
+      {/if}
+    </div>
+  </div>
+{/if}
