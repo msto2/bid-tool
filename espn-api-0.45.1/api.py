@@ -15,7 +15,8 @@ def get_teams():
         {
             "team_name": team.team_name,
             "wins": team.wins,
-            "losses": team.losses
+            "losses": team.losses,
+            "id": team.team_id
         }
         for team in league.teams
     ]
