@@ -70,7 +70,7 @@ export async function load({ fetch }) {
     S: await agentsS.json(),
     K: await agentsK.json()
   };
-console.log(freeAgentsByPosition.WR[0]);
+
   return {
     teams,
     freeAgents,

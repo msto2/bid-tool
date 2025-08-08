@@ -544,7 +544,7 @@
         <button class="team-card" on:click={() => handleTeamClick(team)}>
           <div class="team-header">
             <div>
-              <h2 class="team-name">{team.team_name} {team.id}</h2>
+              <h2 class="team-name">{team.team_name}</h2>
               <div class="team-record">
                 <div class="record-item">
                   <div class="record-label">Record</div>

@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from espn_api.football import League
+import requests
+from typing import Dict, Any, List
+import asyncio
 
 app = FastAPI()
 LEAGUE_ID = 3925
@@ -40,6 +43,7 @@ def get_free_agents():
     free_agents = league.free_agents()
     return [
         {
+            "id": p.playerId,
             "name": p.name,
             "position": p.position,
             "team": p.proTeam,
@@ -59,6 +63,7 @@ def get_free_agents_by_position(position: str, size: int = 10):
 
     return [
         {
+            "id": p.playerId,
             "name": p.name,
             "position": p.position,
             "team": p.proTeam,
@@ -121,4 +126,95 @@ def get_free_agents_s():
 @app.get("/free-agents-k")
 def get_free_agents_k():
     return get_free_agents_by_position("K")
+
+def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
+    """Fetch player stats from ESPN Core API for a specific year"""
+    url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{year}/types/2/athletes/{player_id}/statistics"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Extract relevant stats from the response
+            stats = {}
+            
+            if 'splits' in data and 'categories' in data['splits']:
+                categories = data['splits']['categories']
+                
+                for category in categories:
+                    category_name = category.get('name', '').lower()
+                    
+                    if 'stats' in category:
+                        for stat in category['stats']:
+                            stat_name = stat.get('name', '')
+                            stat_value = stat.get('value', 0)
+                            
+                            # Map stat names to match our existing structure
+                            if category_name == 'passing':
+                                if 'completions' in stat_name.lower():
+                                    stats['passingCompletions'] = stat_value
+                                elif 'attempts' in stat_name.lower():
+                                    stats['passingAttempts'] = stat_value
+                                elif 'yards' in stat_name.lower() and 'passing' in stat_name.lower():
+                                    stats['passingYards'] = stat_value
+                                elif 'touchdowns' in stat_name.lower():
+                                    stats['passingTouchdowns'] = stat_value
+                                elif 'interceptions' in stat_name.lower():
+                                    stats['passingInterceptions'] = stat_value
+                            
+                            elif category_name == 'rushing':
+                                if 'attempts' in stat_name.lower():
+                                    stats['rushingAttempts'] = stat_value
+                                elif 'yards' in stat_name.lower():
+                                    stats['rushingYards'] = stat_value
+                                elif 'touchdowns' in stat_name.lower():
+                                    stats['rushingTouchdowns'] = stat_value
+                            
+                            elif category_name == 'receiving':
+                                if 'targets' in stat_name.lower():
+                                    stats['receivingTargets'] = stat_value
+                                elif 'receptions' in stat_name.lower():
+                                    stats['receivingReceptions'] = stat_value
+                                elif 'yards' in stat_name.lower():
+                                    stats['receivingYards'] = stat_value
+                                elif 'touchdowns' in stat_name.lower():
+                                    stats['receivingTouchdowns'] = stat_value
+            
+            # Calculate derived stats
+            if 'passingCompletions' in stats and 'passingAttempts' in stats and stats['passingAttempts'] > 0:
+                stats['passingCompletionPercentage'] = stats['passingCompletions'] / stats['passingAttempts']
+            
+            if 'rushingYards' in stats and 'rushingAttempts' in stats and stats['rushingAttempts'] > 0:
+                stats['rushingYardsPerAttempt'] = stats['rushingYards'] / stats['rushingAttempts']
+            
+            if 'receivingYards' in stats and 'receivingReceptions' in stats and stats['receivingReceptions'] > 0:
+                stats['receivingYardsPerReception'] = stats['receivingYards'] / stats['receivingReceptions']
+            
+            return {
+                'year': year,
+                'stats': stats
+            }
+    except Exception as e:
+        print(f"Error fetching stats for player {player_id} in {year}: {e}")
+    
+    return {'year': year, 'stats': {}}
+
+@app.get("/player-stats/{player_id}")
+def get_player_historical_stats(player_id: int):
+    """Get historical stats for a player over the past 3 seasons"""
+    current_year = 2024  # Latest completed season
+    years = [current_year - i for i in range(3)]  # [2024, 2023, 2022]
+    
+    historical_stats = []
+    
+    for year in years:
+        year_stats = fetch_player_stats_for_year(player_id, year)
+        if year_stats['stats']:  # Only include years with data
+            historical_stats.append(year_stats)
+    
+    return {
+        'playerId': player_id,
+        'historicalStats': historical_stats
+    }
     

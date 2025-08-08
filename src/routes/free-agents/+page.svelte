@@ -5,8 +5,8 @@
 
   // @ts-ignore
   export let data;
-  const {freeAgentsByPosition} = data;
-  const positions = Object.keys(freeAgentsByPosition);
+  let freeAgentsByPosition = data.freeAgentsByPosition;
+  $: positions = Object.keys(freeAgentsByPosition);
 
   let signedInTeam = null;
 
@@ -98,6 +98,10 @@
   let showAddModal = false;
   let years = 1;
   let salary = 1;
+  let loadingHistoricalStats = {};
+  let historicalStatsCache = {};
+  let showBidSuccess = false;
+  let errorMessage = '';
   
   // @ts-ignore
   function openAddModal(player) {
@@ -110,12 +114,99 @@
   function closeAddModal() {
     showAddModal = false;
     selectedPlayer = null;
+    years = 1;
+    salary = 1;
+    errorMessage = '';
   }
   
   function addPlayer() {
-    // @ts-ignore
-    console.log(`Adding ${selectedPlayer.name} for ${years} years at $${salary}M`);
+    if (!selectedPlayer || !signedInTeam) return;
+
+    // Create bid object
+    const bid = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      playerId: selectedPlayer.id,
+      playerName: selectedPlayer.name,
+      position: selectedPlayer.position,
+      team: selectedPlayer.team,
+      bidder: {
+        teamId: signedInTeam.id,
+        name: signedInTeam.name
+      },
+      contract: {
+        years: years,
+        salary: salary
+      },
+      timestamp: Date.now()
+    };
+
+    // Save to localStorage
+    if (browser) {
+      try {
+        const existingBids = localStorage.getItem('fantasyBids');
+        const bids = existingBids ? JSON.parse(existingBids) : [];
+        
+        // Find and remove any existing bid from same bidder for same player
+        const filteredBids = bids.filter(existingBid => 
+          !(existingBid.playerId === bid.playerId && existingBid.bidder.teamId === bid.bidder.teamId)
+        );
+        
+        // Add the new bid
+        filteredBids.push(bid);
+        localStorage.setItem('fantasyBids', JSON.stringify(filteredBids));
+        
+        // Show success message briefly
+        showBidSuccess = true;
+        setTimeout(() => {
+          showBidSuccess = false;
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Error saving bid:', error);
+        errorMessage = 'Failed to save bid. Please try again.';
+        return;
+      }
+    }
+
+    console.log(`Bid submitted: ${selectedPlayer.name} for ${years} years at $${salary}M by ${signedInTeam.name}`);
     closeAddModal();
+  }
+
+  async function fetchHistoricalStats(playerId) {
+    if (historicalStatsCache[playerId] || loadingHistoricalStats[playerId]) {
+      return historicalStatsCache[playerId] || null;
+    }
+
+    loadingHistoricalStats[playerId] = true;
+    loadingHistoricalStats = { ...loadingHistoricalStats }; // Trigger reactivity
+
+    try {
+      const response = await fetch(`http://localhost:8000/player-stats/${playerId}`);
+      if (response.ok) {
+        const data = await response.json();
+        historicalStatsCache[playerId] = data.historicalStats;
+        return historicalStatsCache[playerId];
+      }
+    } catch (error) {
+      console.error('Error fetching historical stats:', error);
+    } finally {
+      loadingHistoricalStats[playerId] = false;
+      loadingHistoricalStats = { ...loadingHistoricalStats }; // Trigger reactivity
+    }
+
+    return null;
+  }
+
+  async function handleDetailsToggle(event, player) {
+    if (event.target.open && player.id && !historicalStatsCache[player.id]) {
+      const stats = await fetchHistoricalStats(player.id);
+      if (stats) {
+        // Update the player object with historical stats
+        player.historicalStats = stats;
+        // Trigger reactivity by reassigning the freeAgentsByPosition
+        freeAgentsByPosition = { ...freeAgentsByPosition };
+      }
+    }
   }
 </script>
 
@@ -178,7 +269,7 @@
     font-size: 0.9rem;
   }
 
-  .sign-out-btn {
+  .sign-out-btn, .nav-btn {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: #ef4444;
@@ -190,9 +281,20 @@
     transition: all 0.2s ease;
   }
 
+  .nav-btn {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+  }
+
   .sign-out-btn:hover {
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  .nav-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
   }
 
   @media (max-width: 768px) {
@@ -356,29 +458,98 @@
 
   .breakdown-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-    gap: 0.4rem;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.5rem;
+    margin: 0.5rem 0;
   }
 
   .breakdown-item {
     background: rgba(15, 23, 42, 0.4);
-    border-radius: 5px;
-    padding: 0.4rem;
+    border-radius: 6px;
+    padding: 0.6rem 0.4rem;
     text-align: center;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+  }
+
+  .breakdown-item:hover {
+    background: rgba(15, 23, 42, 0.6);
   }
 
   .breakdown-name {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     color: #94a3b8;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.3rem;
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
 
   .breakdown-value {
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #e2e8f0;
+    line-height: 1;
+  }
+
+  /* Desktop optimizations */
+  @media (min-width: 1024px) {
+    .breakdown-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.6rem;
+      max-width: none;
+    }
+
+    .breakdown-item {
+      padding: 0.7rem 0.5rem;
+      min-height: 65px;
+    }
+
+    .breakdown-name {
+      font-size: 0.7rem;
+    }
+
+    .breakdown-value {
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Tablet optimizations */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .breakdown-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+
+    .breakdown-item {
+      min-height: 55px;
+    }
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 767px) {
+    .breakdown-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+    }
+
+    .breakdown-item {
+      padding: 0.5rem 0.3rem;
+      min-height: 50px;
+    }
+
+    .breakdown-name {
+      font-size: 0.6rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .breakdown-value {
+      font-size: 0.8rem;
+    }
   }
 
   .breakdown-section-title {
@@ -519,6 +690,46 @@
     }
   }
 
+  /* Success Toast */
+  .success-toast {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+    z-index: 2000;
+    animation: slideInToast 0.3s ease, slideOutToast 0.3s ease 1.7s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  @keyframes slideInToast {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutToast {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
   /* Desktop Layout */
   @media (min-width: 1024px) {
     .player-card {
@@ -574,6 +785,9 @@
     {#if signedInTeam}
       <div class="user-info">
         <span class="team-name">{signedInTeam.name}</span>
+        <button class="nav-btn" on:click={() => goto('/bids')}>
+          View Bids
+        </button>
         <button class="sign-out-btn" on:click={handleSignOut}>
           Sign Out
         </button>
@@ -623,7 +837,7 @@
             <div></div>
             {#if player.stats}
               <div class="stat-breakdown">
-                <details>
+                <details on:toggle={(e) => handleDetailsToggle(e, player)}>
                   <summary class="breakdown-toggle">📊 Detailed Stats</summary>
                   
                   {#if Object.keys(getRelevantStatLabels(player.position)).length > 0}
@@ -641,6 +855,30 @@
                             </div>
                           </div>
                         {/each}
+                      </div>
+                    {/if}
+
+                    <!-- Historical Stats -->
+                    {#if player.historicalStats && player.historicalStats.length > 0}
+                      {#each player.historicalStats as yearStats}
+                        <div class="breakdown-section-title">{yearStats.year} Season</div>
+                        <div class="breakdown-grid">
+                          {#each Object.entries(yearStats.stats).filter(([k, v]) => getRelevantStatLabels(player.position)[k]) as [statName, value]}
+                            <div class="breakdown-item">
+                              <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
+                              <div class="breakdown-value">
+                                {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                                 statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
+                                 Math.round(value)}
+                              </div>
+                            </div>
+                          {/each}
+                        </div>
+                      {/each}
+                    {:else if loadingHistoricalStats[player.id]}
+                      <div class="breakdown-section-title">Loading Historical Stats...</div>
+                      <div style="text-align: center; padding: 1rem; color: #94a3b8;">
+                        <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(148, 163, 184, 0.3); border-top: 2px solid #06b6d4; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                       </div>
                     {/if}
 
@@ -729,6 +967,20 @@
         </button>
         <button class="btn btn-secondary" on:click={closeAddModal}>Cancel</button>
       </div>
+
+      {#if errorMessage}
+        <div style="color: #ef4444; font-size: 0.8rem; text-align: center; margin-top: 1rem;">
+          {errorMessage}
+        </div>
+      {/if}
     </div>
+  </div>
+{/if}
+
+<!-- Success Toast -->
+{#if showBidSuccess}
+  <div class="success-toast">
+    <span>✅</span>
+    Bid submitted successfully!
   </div>
 {/if}
