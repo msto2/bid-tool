@@ -1,4 +1,8 @@
-export async function load({ fetch }) {
+export async function load({ fetch, setHeaders }) {
+  // Set cache headers for better performance
+  setHeaders({
+    'cache-control': 'max-age=60' // Cache for 1 minute
+  });
   const [
     teamsRes,
     agentsRes,

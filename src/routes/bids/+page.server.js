@@ -1,23 +1,28 @@
 /** @type {import('./$types').PageServerLoad} */
-export async function load() {
-  // This page will primarily use client-side data from localStorage
-  // but we might need team data for display purposes
+export async function load({ fetch, setHeaders }) {
+  // Set cache headers for better performance
+  setHeaders({
+    'cache-control': 'max-age=10' // Cache for 10 seconds (shorter for real-time bid updates)
+  });
   try {
-    const teamsRes = await fetch('http://localhost:8000/teams');
+    // Fetch both teams and bids data
+    const [teamsRes, bidsRes] = await Promise.all([
+      fetch('http://localhost:8000/teams'),
+      fetch('/api/bids')
+    ]);
     
-    if (!teamsRes.ok) {
-      throw new Error('Failed to fetch teams data');
-    }
-    
-    const teams = await teamsRes.json();
+    const teams = teamsRes.ok ? await teamsRes.json() : [];
+    const bids = bidsRes.ok ? await bidsRes.json() : [];
     
     return {
-      teams
+      teams,
+      bids
     };
   } catch (error) {
-    console.error('Error fetching teams:', error);
+    console.error('Error fetching data:', error);
     return {
-      teams: []
+      teams: [],
+      bids: []
     };
   }
 }

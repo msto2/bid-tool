@@ -142,9 +142,9 @@ def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
             if 'splits' in data and 'categories' in data['splits']:
                 categories = data['splits']['categories']
                 
+                
                 for category in categories:
                     category_name = category.get('name', '').lower()
-                    
                     if 'stats' in category:
                         for stat in category['stats']:
                             stat_name = stat.get('name', '')
@@ -164,11 +164,12 @@ def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
                                     stats['passingInterceptions'] = stat_value
                             
                             elif category_name == 'rushing':
-                                if 'attempts' in stat_name.lower():
+                                if stat_name.lower() == 'rushingattempts':
                                     stats['rushingAttempts'] = stat_value
-                                elif 'yards' in stat_name.lower():
+                                elif stat_name.lower() == 'rushingyards':
                                     stats['rushingYards'] = stat_value
-                                elif 'touchdowns' in stat_name.lower():
+                                    print(f"{year}: {stats}")
+                                elif stat_name.lower() == 'rushingtouchdowns':
                                     stats['rushingTouchdowns'] = stat_value
                             
                             elif category_name == 'receiving':
@@ -176,7 +177,7 @@ def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
                                     stats['receivingTargets'] = stat_value
                                 elif 'receptions' in stat_name.lower():
                                     stats['receivingReceptions'] = stat_value
-                                elif 'yards' in stat_name.lower():
+                                elif stat_name.lower() == 'receivingyards':
                                     stats['receivingYards'] = stat_value
                                 elif 'touchdowns' in stat_name.lower():
                                     stats['receivingTouchdowns'] = stat_value
@@ -191,6 +192,7 @@ def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
             if 'receivingYards' in stats and 'receivingReceptions' in stats and stats['receivingReceptions'] > 0:
                 stats['receivingYardsPerReception'] = stats['receivingYards'] / stats['receivingReceptions']
             
+            print(f"{year}: {stats}")
             return {
                 'year': year,
                 'stats': stats

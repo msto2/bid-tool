@@ -31,13 +31,79 @@
           goto('/');
           return;
         }
+        
+        // Set up SSE connection for notifications
+        setupNotifications();
       } catch (error) {
         localStorage.removeItem('signedInTeam');
         goto('/');
         return;
       }
     }
+    
+    // Cleanup on component destroy
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
   });
+
+  function setupNotifications() {
+    if (!browser || eventSource) return; // Prevent duplicate connections
+    
+    eventSource = new EventSource('/api/websocket');
+    
+    eventSource.onopen = () => {
+      console.log('SSE connection established');
+    };
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'new_bid' && data.message) {
+          // Only show notification if it's not from the current user
+          if (!data.message.includes(signedInTeam.name)) {
+            addNotification(data.message);
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing SSE message:', error);
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      // Auto-reconnect after a short delay if connection is lost
+      if (eventSource?.readyState === EventSource.CLOSED) {
+        setTimeout(() => {
+          if (browser && signedInTeam) {
+            eventSource = null;
+            setupNotifications();
+          }
+        }, 3000);
+      }
+    };
+  }
+  
+  function addNotification(message) {
+    const notification = {
+      id: Date.now(),
+      message,
+      timestamp: Date.now()
+    };
+    
+    notifications = [notification, ...notifications];
+    
+    // Auto-remove notification after 5 seconds
+    setTimeout(() => {
+      notifications = notifications.filter(n => n.id !== notification.id);
+    }, 5000);
+  }
+  
+  function removeNotification(id) {
+    notifications = notifications.filter(n => n.id !== id);
+  }
 
   function handleSignOut() {
     if (browser) {
@@ -93,6 +159,18 @@
         return {};
     }
   }
+
+  function getOrderedStats(stats, position) {
+    const labels = getRelevantStatLabels(position);
+    const labelKeys = Object.keys(labels);
+    
+    // Filter stats to only include those that have labels and exist in the data
+    const orderedEntries = labelKeys
+      .filter(key => stats.hasOwnProperty(key) && stats[key] !== null && stats[key] !== undefined)
+      .map(key => [key, stats[key]]);
+    
+    return orderedEntries;
+  }
   
   let selectedPlayer = null;
   let showAddModal = false;
@@ -102,6 +180,10 @@
   let historicalStatsCache = {};
   let showBidSuccess = false;
   let errorMessage = '';
+  
+  // Notification system
+  let notifications = [];
+  let eventSource = null;
   
   // @ts-ignore
   function openAddModal(player) {
@@ -119,12 +201,11 @@
     errorMessage = '';
   }
   
-  function addPlayer() {
+  async function addPlayer() {
     if (!selectedPlayer || !signedInTeam) return;
 
     // Create bid object
     const bid = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
       playerId: selectedPlayer.id,
       playerName: selectedPlayer.name,
       position: selectedPlayer.position,
@@ -136,40 +217,36 @@
       contract: {
         years: years,
         salary: salary
-      },
-      timestamp: Date.now()
+      }
     };
 
-    // Save to localStorage
-    if (browser) {
-      try {
-        const existingBids = localStorage.getItem('fantasyBids');
-        const bids = existingBids ? JSON.parse(existingBids) : [];
-        
-        // Find and remove any existing bid from same bidder for same player
-        const filteredBids = bids.filter(existingBid => 
-          !(existingBid.playerId === bid.playerId && existingBid.bidder.teamId === bid.bidder.teamId)
-        );
-        
-        // Add the new bid
-        filteredBids.push(bid);
-        localStorage.setItem('fantasyBids', JSON.stringify(filteredBids));
-        
-        // Show success message briefly
-        showBidSuccess = true;
-        setTimeout(() => {
-          showBidSuccess = false;
-        }, 2000);
-        
-      } catch (error) {
-        console.error('Error saving bid:', error);
-        errorMessage = 'Failed to save bid. Please try again.';
-        return;
-      }
-    }
+    try {
+      const response = await fetch('/api/bids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bid)
+      });
 
-    console.log(`Bid submitted: ${selectedPlayer.name} for ${years} years at $${salary}M by ${signedInTeam.name}`);
-    closeAddModal();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to submit bid');
+      }
+
+      // Show success message briefly
+      showBidSuccess = true;
+      setTimeout(() => {
+        showBidSuccess = false;
+      }, 2000);
+
+      console.log(`Bid submitted: ${selectedPlayer.name} for ${years} years at $${salary}M by ${signedInTeam.name}`);
+      closeAddModal();
+      
+    } catch (error) {
+      console.error('Error saving bid:', error);
+      errorMessage = error.message || 'Failed to save bid. Please try again.';
+    }
   }
 
   async function fetchHistoricalStats(playerId) {
@@ -181,10 +258,11 @@
     loadingHistoricalStats = { ...loadingHistoricalStats }; // Trigger reactivity
 
     try {
-      const response = await fetch(`http://localhost:8000/player-stats/${playerId}`);
+      const response = await fetch(`/api/player-stats/${playerId}`);
       if (response.ok) {
         const data = await response.json();
         historicalStatsCache[playerId] = data.historicalStats;
+        console.log(data)
         return historicalStatsCache[playerId];
       }
     } catch (error) {
@@ -279,6 +357,8 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
   }
 
   .nav-btn {
@@ -344,13 +424,13 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 12px;
-    padding: 1rem;
+    padding: .5rem 1rem .25rem 1rem;
     position: relative;
     transition: all 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: .25rem;
   }
 
   .player-card:hover {
@@ -367,6 +447,7 @@
 
   .player-info {
     flex: 1;
+    padding-right: .5rem;
   }
 
   .player-name {
@@ -435,8 +516,7 @@
   }
 
   .stat-breakdown {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
+    padding-top: 0.5rem;
     border-top: 1px solid rgba(148, 163, 184, 0.2);
   }
 
@@ -466,7 +546,6 @@
   .breakdown-item {
     background: rgba(15, 23, 42, 0.4);
     border-radius: 6px;
-    padding: 0.6rem 0.4rem;
     text-align: center;
     min-height: 60px;
     display: flex;
@@ -505,7 +584,6 @@
     }
 
     .breakdown-item {
-      padding: 0.7rem 0.5rem;
       min-height: 65px;
     }
 
@@ -708,6 +786,64 @@
     font-weight: 600;
   }
 
+  /* Notifications */
+  .notifications-container {
+    position: fixed;
+    top: 2rem;
+    left: 2rem;
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 300px;
+  }
+
+  .notification {
+    background: rgba(59, 130, 246, 0.9);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    animation: slideInNotification 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .notification-message {
+    flex: 1;
+  }
+
+  .notification-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    margin-left: 0.5rem;
+    transition: color 0.2s ease;
+  }
+
+  .notification-close:hover {
+    color: white;
+  }
+
+  @keyframes slideInNotification {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   @keyframes slideInToast {
     from {
       opacity: 0;
@@ -785,9 +921,9 @@
     {#if signedInTeam}
       <div class="user-info">
         <span class="team-name">{signedInTeam.name}</span>
-        <button class="nav-btn" on:click={() => goto('/bids')}>
+        <a href="/bids" class="nav-btn" data-sveltekit-preload-data="hover">
           View Bids
-        </button>
+        </a>
         <button class="sign-out-btn" on:click={handleSignOut}>
           Sign Out
         </button>
@@ -845,7 +981,24 @@
                     {#if player.stats.projected_breakdown}
                       <div class="breakdown-section-title">Projected Stats</div>
                       <div class="breakdown-grid">
-                        {#each Object.entries(player.stats.projected_breakdown).filter(([k, v]) => !isNaN(parseInt(k)) === false && getRelevantStatLabels(player.position)[k]) as [statName, value]}
+                        {#each getOrderedStats(player.stats.projected_breakdown, player.position) as [statName, value]}
+                          <div class="breakdown-item">
+                            <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
+                            <div class="breakdown-value">
+                              {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                               statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
+                               Math.round(value)}
+                            </div>
+                          </div>
+                        {/each}
+                      </div>
+                    {/if}
+
+                    <!-- Current Season Stats -->
+                    {#if player.stats.breakdown}
+                      <div class="breakdown-section-title">Current Season Stats</div>
+                      <div class="breakdown-grid">
+                        {#each getOrderedStats(player.stats.breakdown, player.position) as [statName, value]}
                           <div class="breakdown-item">
                             <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
                             <div class="breakdown-value">
@@ -860,10 +1013,11 @@
 
                     <!-- Historical Stats -->
                     {#if player.historicalStats && player.historicalStats.length > 0}
+                      <div class="breakdown-section-title">Previous Seasons</div>
                       {#each player.historicalStats as yearStats}
                         <div class="breakdown-section-title">{yearStats.year} Season</div>
                         <div class="breakdown-grid">
-                          {#each Object.entries(yearStats.stats).filter(([k, v]) => getRelevantStatLabels(player.position)[k]) as [statName, value]}
+                          {#each getOrderedStats(yearStats.stats, player.position) as [statName, value]}
                             <div class="breakdown-item">
                               <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
                               <div class="breakdown-value">
@@ -881,45 +1035,50 @@
                         <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(148, 163, 184, 0.3); border-top: 2px solid #06b6d4; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                       </div>
                     {/if}
-
-                    <!-- Current Season Stats -->
-                    {#if player.stats.breakdown}
-                      <div class="breakdown-section-title">Previous Seasons</div>
-                      <div class="breakdown-grid">
-                        {#each Object.entries(player.stats.breakdown).filter(([k, v]) => !isNaN(parseInt(k)) === false && getRelevantStatLabels(player.position)[k]) as [statName, value]}
-                          <div class="breakdown-item">
-                            <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
-                            <div class="breakdown-value">
-                              {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
-                               statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
-                               Math.round(value)}
-                            </div>
-                          </div>
-                        {/each}
-                      </div>
-                    {/if}
                   {:else}
-                    <!-- Fallback for other positions -->
-                    <div class="breakdown-grid">
-                      {#each Object.entries(player.stats.breakdown || {}).filter(([k]) => isNaN(parseInt(k))) as [statName, value]}
-                        <div class="breakdown-item">
-                          <div class="breakdown-name">{statName}</div>
-                          <div class="breakdown-value">{value}</div>
-                        </div>
-                      {/each}
-                    </div>
-
+                    <!-- Fallback for other positions (defensive players, kickers) -->
                     {#if player.stats.projected_breakdown}
                       <div class="breakdown-section-title">Projected Stats</div>
                       <div class="breakdown-grid">
                         {#each Object.entries(player.stats.projected_breakdown).filter(([k]) => isNaN(parseInt(k))) as [statName, value]}
                           <div class="breakdown-item">
                             <div class="breakdown-name">{statName}</div>
-                            <div class="breakdown-value">
-                              {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : Math.round(value)}
-                            </div>
+                            <div class="breakdown-value">{Math.round(value) || value}</div>
                           </div>
                         {/each}
+                      </div>
+                    {/if}
+
+                    {#if player.stats.breakdown}
+                      <div class="breakdown-section-title">Current Season Stats</div>
+                      <div class="breakdown-grid">
+                        {#each Object.entries(player.stats.breakdown).filter(([k]) => isNaN(parseInt(k))) as [statName, value]}
+                          <div class="breakdown-item">
+                            <div class="breakdown-name">{statName}</div>
+                            <div class="breakdown-value">{Math.round(value) || value}</div>
+                          </div>
+                        {/each}
+                      </div>
+                    {/if}
+
+                    <!-- Historical Stats for other positions -->
+                    {#if player.historicalStats && player.historicalStats.length > 0}
+                      <div class="breakdown-section-title">Previous Seasons</div>
+                      {#each player.historicalStats as yearStats}
+                        <div class="breakdown-section-title">{yearStats.year} Season</div>
+                        <div class="breakdown-grid">
+                          {#each Object.entries(yearStats.stats).filter(([k]) => isNaN(parseInt(k))) as [statName, value]}
+                            <div class="breakdown-item">
+                              <div class="breakdown-name">{statName}</div>
+                              <div class="breakdown-value">{Math.round(value) || value}</div>
+                            </div>
+                          {/each}
+                        </div>
+                      {/each}
+                    {:else if loadingHistoricalStats[player.id]}
+                      <div class="breakdown-section-title">Loading Historical Stats...</div>
+                      <div style="text-align: center; padding: 1rem; color: #94a3b8;">
+                        <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(148, 163, 184, 0.3); border-top: 2px solid #06b6d4; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                       </div>
                     {/if}
                   {/if}
@@ -974,6 +1133,18 @@
         </div>
       {/if}
     </div>
+  </div>
+{/if}
+
+<!-- Notifications -->
+{#if notifications.length > 0}
+  <div class="notifications-container">
+    {#each notifications as notification (notification.id)}
+      <div class="notification">
+        <span class="notification-message">{notification.message}</span>
+        <button class="notification-close" on:click={() => removeNotification(notification.id)}>×</button>
+      </div>
+    {/each}
   </div>
 {/if}
 

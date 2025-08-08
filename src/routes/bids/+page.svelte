@@ -6,10 +6,11 @@
 
   export let data;
   const { teams } = data;
+  let { bids } = data;
 
   let signedInTeam = null;
-  let bids = [];
   let teamsMap = {};
+  let eventSource = null;
 
   onMount(() => {
     // Check if user is signed in
@@ -22,15 +23,68 @@
       
       try {
         signedInTeam = JSON.parse(savedTeam);
-        loadBids();
         createTeamsMap();
+        setupRealTimeUpdates();
       } catch (error) {
         localStorage.removeItem('signedInTeam');
         goto('/');
         return;
       }
     }
+    
+    // Cleanup on component destroy
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
   });
+
+  function setupRealTimeUpdates() {
+    if (!browser || eventSource) return; // Prevent duplicate connections
+    
+    eventSource = new EventSource('/api/websocket');
+    
+    eventSource.onopen = () => {
+      console.log('SSE connection established for bids page');
+    };
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'new_bid') {
+          // Refresh the bids list when a new bid is placed
+          refreshBids();
+        }
+      } catch (error) {
+        console.error('Error parsing SSE message:', error);
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      // Auto-reconnect after a short delay if connection is lost
+      if (eventSource?.readyState === EventSource.CLOSED) {
+        setTimeout(() => {
+          if (browser && signedInTeam) {
+            eventSource = null;
+            setupRealTimeUpdates();
+          }
+        }, 3000);
+      }
+    };
+  }
+
+  async function refreshBids() {
+    try {
+      const response = await fetch('/api/bids');
+      if (response.ok) {
+        bids = await response.json();
+      }
+    } catch (error) {
+      console.error('Error refreshing bids:', error);
+    }
+  }
 
   function createTeamsMap() {
     teamsMap = {};
@@ -39,25 +93,6 @@
     });
   }
 
-  function loadBids() {
-    if (browser) {
-      const savedBids = localStorage.getItem('fantasyBids');
-      if (savedBids) {
-        try {
-          const allBids = JSON.parse(savedBids);
-          bids = allBids.sort((a, b) => {
-            // Sort by bidder name first, then by timestamp
-            const nameComparison = a.bidder.name.localeCompare(b.bidder.name);
-            if (nameComparison !== 0) return nameComparison;
-            return b.timestamp - a.timestamp; // Most recent first for same bidder
-          });
-        } catch (error) {
-          console.error('Error loading bids:', error);
-          bids = [];
-        }
-      }
-    }
-  }
 
   function handleSignOut() {
     if (browser) {
@@ -84,9 +119,6 @@
     return contact ? contact.email : '';
   }
 
-  function navigateToFreeAgents() {
-    goto('/free-agents');
-  }
 </script>
 
 <style>
@@ -158,6 +190,8 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
   }
 
   .nav-btn {
@@ -203,7 +237,7 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(148, 163, 184, 0.15);
     border-radius: 8px;
-    padding: 0.75rem 1rem;
+    padding: 0 1rem 0 1rem;
     position: relative;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -235,11 +269,7 @@
   }
 
   .item-label {
-    font-size: 0.65rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-top: 0.1rem;
+    display: none;
   }
 
   .user-name {
@@ -367,6 +397,7 @@
       margin-top: 0;
       text-transform: none;
       letter-spacing: normal;
+      display: contents;
     }
   }
 </style>
@@ -376,9 +407,9 @@
     {#if signedInTeam}
       <div class="user-info">
         <span class="team-name">{signedInTeam.name}</span>
-        <button class="nav-btn" on:click={navigateToFreeAgents}>
+        <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
           Free Agents
-        </button>
+        </a>
         <button class="sign-out-btn" on:click={handleSignOut}>
           Sign Out
         </button>
@@ -393,9 +424,9 @@
     <div class="bid-count">
       {bids.length} {bids.length === 1 ? 'bid' : 'bids'} submitted
     </div>
-    <button class="nav-btn" on:click={navigateToFreeAgents}>
+    <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
       + Place New Bid
-    </button>
+    </a>
   </div>
 
   {#if bids.length > 0}
@@ -415,38 +446,36 @@
           <!-- User Name -->
           <div class="bid-item">
             <div class="item-value user-name">{bid.bidder.name}</div>
-            <div class="item-label">User Name</div>
           </div>
           
           <!-- Player Name -->
           <div class="bid-item">
-            <div class="item-value player-name">{bid.playerName}</div>
             <div class="player-position">{bid.position} • {bid.team}</div>
-            <div class="item-label">Player</div>
+            <div class="item-value player-name">{bid.playerName}</div>
           </div>
           
           <!-- Contract Length -->
           <div class="bid-item">
-            <div class="item-value contract-years">{bid.contract.years}yr{bid.contract.years > 1 ? 's' : ''}</div>
             <div class="item-label">Contract</div>
+            <div class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</div>
           </div>
           
           <!-- Annual Salary -->
           <div class="bid-item">
-            <div class="item-value salary-value">{formatCurrency(bid.contract.salary)}</div>
             <div class="item-label">Annual</div>
+            <div class="item-value salary-value">{formatCurrency(bid.contract.salary)}</div>
           </div>
           
           <!-- Total Value -->
           <div class="bid-item">
-            <div class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)}</div>
             <div class="item-label">Total</div>
+            <div class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)}</div>
           </div>
           
           <!-- Submitted Date -->
           <div class="bid-item">
-            <div class="item-value submitted-date">{formatDate(bid.timestamp)}</div>
             <div class="item-label">Submitted</div>
+            <div class="item-value submitted-date">{formatDate(bid.timestamp)}</div>
           </div>
         </div>
       {/each}
@@ -456,9 +485,9 @@
       <div class="no-bids-icon">📝</div>
       <h3>No bids submitted yet</h3>
       <p>Start placing bids on free agents to see them appear here.</p>
-      <button class="nav-btn" style="margin-top: 1rem;" on:click={navigateToFreeAgents}>
+      <a href="/free-agents" class="nav-btn" style="margin-top: 1rem;" data-sveltekit-preload-data="hover">
         Browse Free Agents
-      </button>
+      </a>
     </div>
   {/if}
 </div>
