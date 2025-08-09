@@ -44,7 +44,8 @@ The application uses a **dual API approach**:
 1. **League Data**: Direct ESPN API → SvelteKit server → Component props
 2. **Free Agent Data**: External API server → SvelteKit server → Component props
 3. **Player Stats**: Includes both current season and projected statistics
-4. **Position Filtering**: Separate endpoints for QB, RB, WR, TE, and defensive positions
+4. **Position Filtering**: Server-side URL parameter filtering using SvelteKit load functions
+5. **Bid Management**: In-memory storage with localStorage persistence and server-side API
 
 ## Key Files and Structure
 

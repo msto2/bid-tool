@@ -16,12 +16,19 @@
   let isLoading = false;
   let errorMessage = '';
 
+  let signedInTeam = null;
+
   onMount(() => {
-    // Check if user is already signed in
+    // Check if user is already signed in, but don't redirect
     if (browser) {
       const savedTeam = localStorage.getItem('signedInTeam');
       if (savedTeam) {
-        goto('/free-agents');
+        try {
+          signedInTeam = JSON.parse(savedTeam);
+        } catch (error) {
+          // Invalid saved team data, remove it
+          localStorage.removeItem('signedInTeam');
+        }
       }
     }
   });
@@ -106,6 +113,13 @@
     }, 1500);
   }
 
+  function handleSignOut() {
+    if (browser) {
+      localStorage.removeItem('signedInTeam');
+      signedInTeam = null;
+    }
+  }
+
   function handleKeyPress(event) {
     if (event.key === 'Enter') {
       if (signInStep === 'choose') {
@@ -137,6 +151,56 @@
   .header {
     text-align: center;
     margin-bottom: 3rem;
+    position: relative;
+  }
+
+  .user-info {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(30, 41, 59, 0.9);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .team-name {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .nav-btn, .sign-out-btn {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .sign-out-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+  }
+
+  .nav-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .sign-out-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
   }
 
   .main-title {
@@ -193,7 +257,7 @@
     margin-bottom: 1rem;
   }
 
-  .team-name {
+  .team-name.card-title {
     font-size: 1.25rem;
     font-weight: 700;
     color: #f1f5f9;
@@ -499,6 +563,18 @@
       font-size: 2rem;
     }
 
+    .user-info {
+      position: static;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
     .teams-grid {
       grid-template-columns: 1fr;
       gap: 1rem;
@@ -533,10 +609,25 @@
 
 <div class="container">
   <div class="header">
+    {#if signedInTeam}
+      <div class="user-info">
+        <span class="team-name">{signedInTeam.name}</span>
+        <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
+          Free Agents
+        </a>
+        <a href="/bids" class="nav-btn" data-sveltekit-preload-data="hover">
+          Bids
+        </a>
+        <button class="sign-out-btn" on:click={handleSignOut}>
+          Sign Out
+        </button>
+      </div>
+    {/if}
     <h1 class="main-title">Aliquippa Keeper League</h1>
     <p class="subtitle">Choose your team to get started</p>
     <p class="league-info">League ID: 3925 • Season: 2025</p>
   </div>
+  
 
   {#if teams && teams.length > 0}
     <div class="teams-grid">
@@ -544,7 +635,7 @@
         <button class="team-card" on:click={() => handleTeamClick(team)}>
           <div class="team-header">
             <div>
-              <h2 class="team-name">{team.team_name}</h2>
+              <h2 class="team-name card-title">{team.team_name}</h2>
               <div class="team-record">
                 <div class="record-item">
                   <div class="record-label">Record</div>

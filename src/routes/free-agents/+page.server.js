@@ -1,7 +1,7 @@
 export async function load({ fetch, setHeaders, url }) {
   // Set cache headers for better performance
   setHeaders({
-    'cache-control': 'max-age=60' // Cache for 1 minute
+    'cache-control': 'max-age=300' // Cache for 1 minute
   });
   
   // Check if a specific position is requested

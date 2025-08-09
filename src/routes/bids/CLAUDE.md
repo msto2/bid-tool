@@ -68,9 +68,23 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 - Maps team IDs from FastAPI to team names
 - Used for displaying bidder team information
 
+#### `deleteBid(bidId)`
+- Sends DELETE request to `/api/bids` with query parameters
+- Updates local bid list immediately on success
+- Handles API errors gracefully with console logging
+
+#### `canDeleteBid(bid)` (Reactive)
+- Checks if current user can delete a specific bid
+- Reactive function using `$:` syntax for automatic updates
+- Validates user authentication and bid ownership
+
 #### Navigation Functions
 - `navigateToFreeAgents()` - Routes to free agent marketplace
 - `handleSignOut()` - Clears authentication and redirects
+
+#### Real-time Updates
+- `setupRealTimeUpdates()` - Establishes SSE connection
+- `refreshBids()` - Fetches updated bid list from server
 
 ### Display Components
 
@@ -79,6 +93,7 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 - **Contract Details**: Years, annual salary, total value
 - **Bidder Info**: Team name, contact email
 - **Timestamp**: Formatted submission date
+- **Delete Button**: Conditional delete functionality for bid owners
 
 #### Empty State
 - Helpful messaging when no bids exist
@@ -94,11 +109,21 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 - **Color Coding**: Green for contract values, blue for navigation
 
 ### Layout Breakpoints
-- **Desktop**: Full feature layout with positioned elements
+- **Desktop**: Full feature layout with positioned elements and right-aligned delete buttons
 - **Tablet**: Adjusted grid and simplified layouts
-- **Mobile**: Stacked elements and full-width components
+- **Mobile**: Stacked elements with delete buttons next to user names
 
 ## Integration Points
+
+### Server-Side API (`/api/bids`)
+- **GET**: Fetches all bids with automatic cleanup of invalid entries
+- **POST**: Creates new bids with validation and real-time notifications
+- **DELETE**: Removes bids by ID with proper authorization checks
+
+### Real-time Updates (SSE)
+- Establishes Server-Sent Events connection to `/api/websocket`
+- Automatically refreshes bid list when new bids are submitted
+- Handles connection failures with auto-reconnection
 
 ### localStorage Interface
 - Reads bid data written by free-agents page
@@ -119,8 +144,9 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 
 - **Missing Data**: Graceful handling of empty states
 - **Invalid JSON**: Error recovery for corrupted localStorage
-- **API Failures**: Fallback to empty team data
-- **Authentication**: Automatic redirect to login flow
+- **API Failures**: Fallback to empty team data and SSE reconnection
+- **Authentication**: Automatic redirect to login flow and reactive permission checks
+- **Delete Operations**: Clear error logging and user feedback
 
 ## Development Guidelines
 
@@ -145,7 +171,9 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 ## Future Enhancements
 
 - **Filtering**: Add filters by position, salary range, or bidder
-- **Export**: CSV/PDF export functionality for league management
+- **Export**: CSV/PDF export functionality for league management  
 - **Bid Status**: Add pending/accepted/rejected status tracking
-- **Notifications**: Real-time updates when new bids are placed
+- **Enhanced Notifications**: Toast notifications for bid actions and updates
 - **Analytics**: Bid trends and salary cap analysis
+- **Bulk Actions**: Multi-select delete and bulk bid management
+- **Audit Trail**: Track bid modifications and deletion history
