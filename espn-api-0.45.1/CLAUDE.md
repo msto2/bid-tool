@@ -35,6 +35,7 @@ This is a FastAPI backend that serves as a bridge between the ESPN Fantasy Footb
 - **Data Source**: ESPN Core API (`sports.core.api.espn.com`)
 - **Years Covered**: 2022, 2023, 2024
 - **Response Format**: `{playerId, historicalStats: [{year, stats}]}`
+- **Stat Normalization**: Maps ESPN stat IDs to consistent field names
 
 ## Key Functions
 
@@ -44,9 +45,10 @@ This is a FastAPI backend that serves as a bridge between the ESPN Fantasy Footb
 
 ### `fetch_player_stats_for_year(player_id: int, year: int)`
 - Fetches individual season stats from ESPN Core API
-- Maps ESPN stat names to consistent internal format
+- Maps ESPN stat IDs to consistent field names using predefined mappings
 - Calculates derived stats (completion percentage, yards per attempt, etc.)
 - Handles API failures gracefully with empty responses
+- Properly handles missing or null stat values
 
 ### `get_player_historical_stats(player_id: int)`
 - Orchestrates multi-year stats collection
@@ -55,13 +57,26 @@ This is a FastAPI backend that serves as a bridge between the ESPN Fantasy Footb
 
 ## Stat Mapping Structure
 
-The backend normalizes ESPN API stats to consistent naming:
+The backend maps ESPN Core API stat IDs to consistent field names:
 
-**Passing Stats**: `passingCompletions`, `passingAttempts`, `passingYards`, `passingTouchdowns`, `passingInterceptions`, `passingCompletionPercentage`
+**ESPN Stat ID Mappings**:
+- `3` → `passingCompletions`
+- `4` → `passingAttempts`  
+- `5` → `passingYards`
+- `6` → `passingTouchdowns`
+- `7` → `passingInterceptions`
+- `23` → `rushingAttempts`
+- `24` → `rushingYards` 
+- `25` → `rushingTouchdowns`
+- `53` → `receivingTargets`
+- `54` → `receivingReceptions`
+- `55` → `receivingYards`
+- `56` → `receivingTouchdowns`
 
-**Rushing Stats**: `rushingAttempts`, `rushingYards`, `rushingTouchdowns`, `rushingYardsPerAttempt`
-
-**Receiving Stats**: `receivingTargets`, `receivingReceptions`, `receivingYards`, `receivingTouchdowns`, `receivingYardsPerReception`
+**Derived Calculations**:
+- `passingCompletionPercentage` = completions / attempts * 100
+- `rushingYardsPerAttempt` = yards / attempts
+- `receivingYardsPerReception` = yards / receptions
 
 ## Running the Server
 
@@ -77,6 +92,8 @@ uvicorn api:app --reload --port 8000
 - **Rate Limiting**: Be mindful of ESPN API rate limits when fetching historical data
 - **League Configuration**: Update LEAGUE_ID and YEAR constants when needed
 - **Player ID Mapping**: Ensure ESPN player IDs are correctly passed from frontend
+- **Stat ID Consistency**: ESPN Core API uses numeric IDs that require mapping
+- **Missing Data Handling**: Gracefully handles seasons with no statistical data
 
 ## Integration with Frontend
 
@@ -89,5 +106,7 @@ uvicorn api:app --reload --port 8000
 
 - Add caching for historical stats to reduce API calls
 - Implement player search functionality
-- Add more detailed defensive stats
+- Add more detailed defensive stats and special teams statistics
+- Expand stat mapping to include additional ESPN stat IDs
 - Consider database integration for persistent data storage
+- Add stat validation to ensure data quality and consistency

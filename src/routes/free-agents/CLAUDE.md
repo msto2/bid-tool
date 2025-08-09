@@ -14,15 +14,17 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 ## Key Features
 
 ### Data Loading Architecture
-- **Server-Side**: Fetches position-specific free agent data from FastAPI
+- **Server-Side**: Fetches position-specific free agent data using URL parameters
+- **Position Filtering**: URL-based position filtering with reactive data loading
 - **Client-Side**: Lazy loads historical stats on demand
 - **Caching**: Prevents redundant API calls with in-memory cache
 - **Error Handling**: Graceful fallbacks for API failures
 
 ### Player Display System
-- **Position Sections**: Organized by QB, RB, WR, TE, defensive positions
+- **Position Filtering**: Navigate between All, QB, RB, WR, TE, and defensive positions
 - **Card Layout**: Rich player information with expandable details
 - **Stats Integration**: Current projections + 3 years of historical data
+- **Category-Based Stats**: Organized by passing, rushing, and receiving sections
 - **Responsive Design**: Optimized for mobile, tablet, and desktop
 
 ### Bid Submission Flow
@@ -60,13 +62,19 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 
 ### State Management
 - `signedInTeam` - Authentication state
-- `freeAgentsByPosition` - Mutable player data (allows historical stats updates)
+- `freeAgents` - Reactive player data from server
+- `currentPosition` - Active position filter from URL parameters
 - `selectedPlayer` - Current bid target
 - `showAddModal` - Bid modal visibility
 - `loadingHistoricalStats` - Track loading states per player
 - `historicalStatsCache` - In-memory stats cache
 
 ### Key Functions
+
+#### `handlePositionChange(position)`
+- Navigates to URL with position parameter using goto()
+- Triggers server-side data reload for selected position
+- Updates reactive data and UI state
 
 #### `fetchHistoricalStats(playerId)`
 - Makes API request to FastAPI backend
@@ -88,17 +96,17 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 
 ### Statistical Display System
 
-#### Stat Label Mapping
-- **Position-Specific**: Different stats for QB vs RB vs WR/TE
-- **Consistent Naming**: Unified display labels across data sources
-- **Derived Calculations**: Completion percentages, yards per attempt
+#### Category-Based Organization
+- **getStatsByCategory(stats, position)**: Organizes stats into passing, rushing, receiving
+- **getCategoryLabel(category)**: Maps category keys to display labels
+- **getStatLabel(stat)**: Converts stat keys to readable display names
+- **Position-Specific Logic**: Different categories for QB vs RB vs WR/TE
 
-#### Breakdown Grid System
-- **Responsive Design**: 
-  - Desktop: Single row layout (6-8 columns)
-  - Tablet: 4 columns
-  - Mobile: 3 columns
-- **Hover Effects**: Visual feedback on interaction
+#### Breakdown Grid System  
+- **Category Sections**: Each row displays one stat category (passing, rushing, receiving)
+- **Centered Layout**: Category titles and year headers centered above stats grid
+- **Responsive Design**: Flexbox layout with center justification
+- **Compact Display**: Tighter horizontal spacing with smaller text
 - **Loading States**: Spinner animations during data fetch
 
 ## UI/UX Features
@@ -124,7 +132,8 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 ## Integration Points
 
 ### FastAPI Backend
-- **Position Endpoints**: `/free-agents-{position}`
+- **Position Endpoints**: `/free-agents-{position}` (server-side fetching)
+- **URL Parameter Integration**: Position filtering via `?position=` query parameters
 - **Historical Stats**: `/player-stats/{player_id}`
 - **Team Data**: Links to team information system
 
@@ -146,9 +155,10 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 - **Loading States**: Visual feedback during data fetch
 
 ### Reactivity Management
-- **Mutable Data**: `freeAgentsByPosition` as reactive variable
-- **Selective Updates**: Only update specific player objects
-- **Efficient Re-renders**: Svelte's reactive assignments
+- **Server-Side Data**: URL navigation triggers automatic data reloads
+- **Reactive Statements**: `$:` syntax for position and data management
+- **Selective Updates**: Only update specific player objects for historical stats
+- **Efficient Re-renders**: Svelte's reactive assignments and component updates
 
 ## Development Guidelines
 
@@ -159,7 +169,9 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 - **Error Handling**: Graceful degradation for API failures
 
 ### Statistical Enhancements
-- **Position Logic**: Update `getRelevantStatLabels()` for new positions
+- **Category Functions**: Update `getStatsByCategory()` for new positions
+- **Label Mapping**: Maintain `getCategoryLabel()` and `getStatLabel()` consistency
+- **Position Logic**: Extend category assignment logic for new positions
 - **Data Mapping**: Maintain consistency with backend stat names
 - **Display Formatting**: Use existing percentage and rounding logic
 

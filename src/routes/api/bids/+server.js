@@ -87,6 +87,23 @@ function broadcastBidNotification(bid) {
   }
 }
 
+// Function to broadcast bid deletion notifications to all connected clients
+function broadcastBidDeletion(bidId) {
+  const notification = {
+    type: 'bid_deleted',
+    bidId: bidId,
+    message: `A bid has been deleted`,
+    timestamp: Date.now()
+  };
+  
+  // Broadcast to SSE clients synchronously
+  try {
+    broadcastToSSEClients(notification);
+  } catch (error) {
+    console.error('Error broadcasting deletion notification:', error);
+  }
+}
+
 /** @type {import('./$types').RequestHandler} */
 export async function GET() {
 	try {
@@ -166,6 +183,9 @@ export async function DELETE({ url }) {
 		if (bidsStorage.length === initialLength) {
 			return json({ error: 'Bid not found' }, { status: 404 });
 		}
+		
+		// Broadcast bid deletion notification to all connected clients
+		broadcastBidDeletion(bidId);
 		
 		return json({ success: true });
 	} catch (error) {

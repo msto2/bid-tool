@@ -154,9 +154,9 @@ def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
                             if category_name == 'passing':
                                 if 'completions' in stat_name.lower():
                                     stats['passingCompletions'] = stat_value
-                                elif 'attempts' in stat_name.lower():
+                                elif stat_name.lower() == 'passingattempts':
                                     stats['passingAttempts'] = stat_value
-                                elif 'yards' in stat_name.lower() and 'passing' in stat_name.lower():
+                                elif stat_name.lower() == 'passingyards':
                                     stats['passingYards'] = stat_value
                                 elif 'touchdowns' in stat_name.lower():
                                     stats['passingTouchdowns'] = stat_value

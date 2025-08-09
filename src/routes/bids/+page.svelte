@@ -55,6 +55,9 @@
         if (data.type === 'new_bid') {
           // Refresh the bids list when a new bid is placed
           refreshBids();
+        } else if (data.type === 'bid_deleted') {
+          // Remove the deleted bid from the local list immediately for better UX
+          bids = bids.filter(bid => bid.id !== data.bidId);
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
@@ -118,6 +121,38 @@
     const contact = contacts[teamId];
     return contact ? contact.email : '';
   }
+
+  async function deleteBid(bidId) {
+    try {
+      const response = await fetch(`/api/bids?id=${bidId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Remove the bid from the local list
+        bids = bids.filter(bid => bid.id !== bidId);
+        console.log('Bid deleted successfully');
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to delete bid:', errorData);
+      }
+    } catch (error) {
+      console.error('Error deleting bid:', error);
+    }
+  }
+
+  // Reactive function that updates when signedInTeam changes
+  $: canDeleteBid = (bid) => {
+    if (!signedInTeam || !bid || !bid.bidder) return false;
+    console.log('Checking delete permissions:', { 
+      signedInTeam: signedInTeam?.id, 
+      bidderTeamId: bid.bidder.teamId 
+    });
+    return signedInTeam.id === bid.bidder.teamId;
+  };
 
 </script>
 
@@ -242,7 +277,7 @@
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     display: grid;
-    grid-template-columns: 1.2fr 1.8fr 0.8fr 0.8fr 0.8fr 1fr;
+    grid-template-columns: 1.2fr 1.8fr 0.8fr 0.8fr 0.8fr 1fr 40px;
     gap: 1rem;
     align-items: center;
     min-height: 50px;
@@ -304,10 +339,41 @@
     font-size: 0.75rem;
   }
 
+  .delete-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .delete-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  .user-name-row .delete-btn {
+    display: none; /* Hide mobile delete button on desktop */
+  }
+
+  .desktop-delete {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
   /* Header row for labels */
   .bids-header {
     display: grid;
-    grid-template-columns: 1.2fr 1.8fr 0.8fr 0.8fr 0.8fr 1fr;
+    grid-template-columns: 1.2fr 1.8fr 0.8fr 0.8fr 0.8fr 1fr 40px;
     gap: 1rem;
     padding: 0.75rem 1rem;
     background: rgba(15, 23, 42, 0.6);
@@ -399,6 +465,27 @@
       letter-spacing: normal;
       display: contents;
     }
+
+    .user-name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .delete-btn {
+      width: 24px;
+      height: 24px;
+      font-size: 0.7rem;
+    }
+
+    .user-name-row .delete-btn {
+      display: flex; /* Show mobile delete button on mobile */
+    }
+
+    .desktop-delete {
+      display: none; /* Hide desktop delete button on mobile */
+    }
   }
 </style>
 
@@ -438,6 +525,7 @@
       <div class="header-label">Annual</div>
       <div class="header-label">Total</div>
       <div class="header-label">Submitted</div>
+      <div class="header-label"></div>
     </div>
 
     <div class="bids-grid">
@@ -445,7 +533,12 @@
         <div class="bid-card">
           <!-- User Name -->
           <div class="bid-item">
-            <div class="item-value user-name">{bid.bidder.name}</div>
+            <div class="user-name-row">
+              <div class="item-value user-name">{bid.bidder.name}</div>
+              {#if canDeleteBid(bid)}
+                <button class="delete-btn" on:click={() => deleteBid(bid.id)} title="Delete bid">X</button>
+              {/if}
+            </div>
           </div>
           
           <!-- Player Name -->
@@ -477,6 +570,15 @@
             <div class="item-label">Submitted</div>
             <div class="item-value submitted-date">{formatDate(bid.timestamp)}</div>
           </div>
+
+          <!-- Delete Button (Desktop Only) -->
+          {#if canDeleteBid(bid)}
+            <div class="bid-item desktop-delete">
+              <button class="delete-btn" on:click={() => deleteBid(bid.id)} title="Delete bid">×</button>
+            </div>
+          {:else}
+            <div class="bid-item"></div>
+          {/if}
         </div>
       {/each}
     </div>

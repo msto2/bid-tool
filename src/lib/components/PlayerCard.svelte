@@ -58,15 +58,67 @@
     }
   }
 
-  function getOrderedStats(stats, position) {
-    const labels = getRelevantStatLabels(position);
-    const labelKeys = Object.keys(labels);
+  function getStatsByCategory(stats, position) {
+    const categories = {
+      passing: [],
+      rushing: [],
+      receiving: []
+    };
+    // console.log(stats);
     
-    const orderedEntries = labelKeys
-      .filter(key => stats.hasOwnProperty(key) && stats[key] !== null && stats[key] !== undefined)
-      .map(key => [key, stats[key]]);
+    // Process stats in the order defined by the statLabels objects
+    // Passing stats in order
+    Object.keys(statLabelsPassing).forEach(statKey => {
+      if (stats[statKey] !== null && stats[statKey] !== undefined) {
+        categories.passing.push([statKey, stats[statKey]]);
+      }
+    });
     
-    return orderedEntries;
+    // Rushing stats in order
+    Object.keys(statLabelsRushing).forEach(statKey => {
+      if (stats[statKey] !== null && stats[statKey] !== undefined) {
+        categories.rushing.push([statKey, stats[statKey]]);
+      }
+    });
+    
+    // Receiving stats in order
+    Object.keys(statLabelReceiving).forEach(statKey => {
+      if (stats[statKey] !== null && stats[statKey] !== undefined) {
+        categories.receiving.push([statKey, stats[statKey]]);
+      }
+    });
+    
+    // Filter based on position
+    const result = {};
+    switch(position) {
+      case 'QB':
+        if (categories.passing.length > 0) result.passing = categories.passing;
+        if (categories.rushing.length > 0) result.rushing = categories.rushing;
+        break;
+      case 'RB':
+        if (categories.rushing.length > 0) result.rushing = categories.rushing;
+        if (categories.receiving.length > 0) result.receiving = categories.receiving;
+        break;
+      case 'WR':
+      case 'TE':
+        if (categories.receiving.length > 0) result.receiving = categories.receiving;
+        break;
+    }
+    
+    return result;
+  }
+
+  function getCategoryLabel(category) {
+    const labels = {
+      passing: 'Passing',
+      rushing: 'Rushing', 
+      receiving: 'Receiving'
+    };
+    return labels[category] || category;
+  }
+
+  function getStatLabel(statName) {
+    return statLabelsPassing[statName] || statLabelsRushing[statName] || statLabelReceiving[statName] || statName;
   }
 
   function openBidModal() {
@@ -249,21 +301,26 @@
   }
 
   .breakdown-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 0.5rem;
-    margin: 0.5rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+    margin: 0 auto;
   }
 
   .breakdown-item {
     background: rgba(15, 23, 42, 0.4);
     border-radius: 6px;
     text-align: center;
-    min-height: 60px;
+    min-height: 40px;
+    max-height: 60px;
+    width: 8rem;
+    padding: 0 0.1rem 0 0.1rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
     transition: background-color 0.2s ease;
+    flex-shrink: 0;
   }
 
   .breakdown-item:hover {
@@ -271,17 +328,17 @@
   }
 
   .breakdown-name {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
     color: #94a3b8;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.2rem;
     font-weight: 500;
-    line-height: 1.1;
+    line-height: 1.0;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
   }
 
   .breakdown-value {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: #e2e8f0;
     line-height: 1;
@@ -294,6 +351,27 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  .breakdown-year-title {
+    margin: 0.75rem 0 0.4rem;
+    font-weight: 600;
+    color: #06b6d4;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  .breakdown-category-title {
+    margin: 0.5rem 0 0.3rem;
+    font-weight: 600;
+    color: #10b981;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    text-align: center;
   }
 
   .modal-overlay {
@@ -427,20 +505,15 @@
   /* Desktop optimizations */
   @media (min-width: 1024px) {
     .breakdown-grid {
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 0.6rem;
-    }
-
-    .breakdown-item {
-      min-height: 65px;
+      gap: 0.3rem;
     }
 
     .breakdown-name {
-      font-size: 0.7rem;
+      font-size: 0.6rem;
     }
 
     .breakdown-value {
-      font-size: 0.9rem;
+      font-size: 0.8rem;
     }
 
     .player-card {
@@ -465,22 +538,22 @@
   /* Mobile optimizations */
   @media (max-width: 767px) {
     .breakdown-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.4rem;
+      gap: 0.2rem;
     }
 
     .breakdown-item {
-      padding: 0.5rem 0.3rem;
-      min-height: 50px;
+      min-height: 45px;
+      width: 3.5rem;
+      padding: 0.2rem;
     }
 
     .breakdown-name {
-      font-size: 0.6rem;
-      margin-bottom: 0.2rem;
+      font-size: 0.5rem;
+      margin-bottom: 0.15rem;
     }
 
     .breakdown-value {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
     }
 
     .player-stats {
@@ -542,46 +615,32 @@
           <!-- Projected Stats -->
           {#if player.stats.projected_breakdown}
             <div class="breakdown-section-title">Projected Stats</div>
-            <div class="breakdown-grid">
-              {#each getOrderedStats(player.stats.projected_breakdown, player.position) as [statName, value]}
-                <div class="breakdown-item">
-                  <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
-                  <div class="breakdown-value">
-                    {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
-                     statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
-                     Math.round(value)}
+            {#each Object.entries(getStatsByCategory(player.stats.projected_breakdown, player.position)) as [category, stats]}
+              <div class="breakdown-category-title">{getCategoryLabel(category)}</div>
+              <div class="breakdown-grid">
+                {#each stats as [statName, value]}
+                  <div class="breakdown-item">
+                    <div class="breakdown-name">{getStatLabel(statName)}</div>
+                    <div class="breakdown-value">
+                      {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                       statName === 'passingYards' || statName === 'rushingYards' || statName === 'receivingYards' ? Math.round(value * 17): 
+                       Math.round(value)}
+                    </div>
                   </div>
-                </div>
-              {/each}
-            </div>
+                {/each}
+              </div>
+            {/each}
           {/if}
 
           <!-- Current Season Stats -->
-          {#if player.stats.breakdown}
+          {#if player.stats.breakdown && player.stats.breakdown.length > 0}
             <div class="breakdown-section-title">Current Season Stats</div>
-            <div class="breakdown-grid">
-              {#each getOrderedStats(player.stats.breakdown, player.position) as [statName, value]}
-                <div class="breakdown-item">
-                  <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
-                  <div class="breakdown-value">
-                    {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
-                     statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
-                     Math.round(value)}
-                  </div>
-                </div>
-              {/each}
-            </div>
-          {/if}
-
-          <!-- Historical Stats -->
-          {#if player.historicalStats && player.historicalStats.length > 0}
-            <div class="breakdown-section-title">Previous Seasons</div>
-            {#each player.historicalStats as yearStats}
-              <div class="breakdown-section-title">{yearStats.year} Season</div>
+            {#each Object.entries(getStatsByCategory(player.stats.breakdown, player.position)) as [category, stats]}
+              <div class="breakdown-category-title">{getCategoryLabel(category)}</div>
               <div class="breakdown-grid">
-                {#each getOrderedStats(yearStats.stats, player.position) as [statName, value]}
+                {#each stats as [statName, value]}
                   <div class="breakdown-item">
-                    <div class="breakdown-name">{getRelevantStatLabels(player.position)[statName]}</div>
+                    <div class="breakdown-name">{getStatLabel(statName)}</div>
                     <div class="breakdown-value">
                       {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
                        statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
@@ -590,6 +649,28 @@
                   </div>
                 {/each}
               </div>
+            {/each}
+          {/if}
+
+          <!-- Historical Stats -->
+          {#if player.historicalStats && player.historicalStats.length > 0}
+            {#each player.historicalStats as yearStats}
+              <div class="breakdown-year-title">{yearStats.year} Season</div>
+              {#each Object.entries(getStatsByCategory(yearStats.stats, player.position)) as [category, stats]}
+                <div class="breakdown-category-title">{getCategoryLabel(category)}</div>
+                <div class="breakdown-grid">
+                  {#each stats as [statName, value]}
+                    <div class="breakdown-item">
+                      <div class="breakdown-name">{getStatLabel(statName)}</div>
+                      <div class="breakdown-value">
+                        {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                         statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
+                         Math.round(value)}
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {/each}
             {/each}
           {:else if loadingHistoricalStats[player.id]}
             <div class="breakdown-section-title">Loading Historical Stats...</div>
