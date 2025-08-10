@@ -113,6 +113,15 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 - **Tablet**: Adjusted grid and simplified layouts
 - **Mobile**: Stacked elements with delete buttons next to user names
 
+### Header Layout Design
+- **Clean Architecture**: Compact user navigation positioned to right of page title
+- **No Team Display**: Removed team name for cleaner appearance  
+- **Desktop Layout**: Absolutely positioned navigation (top: 50%, right: 0)
+- **Mobile Layout**: Stacked navigation above page content
+- **Footer Sign-out**: Sign-out button moved to bottom footer, right-aligned on desktop
+- **Consistent Styling**: Small navigation buttons (0.75rem font, 0.4rem x 0.6rem padding)
+- **Cross-page Navigation**: Links to Free Agents and Home pages
+
 ## Integration Points
 
 ### Server-Side API (`/api/bids`)

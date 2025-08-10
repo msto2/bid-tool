@@ -42,10 +42,31 @@ The application uses a **dual API approach**:
 
 ### Data Flow
 1. **League Data**: Direct ESPN API → SvelteKit server → Component props
-2. **Free Agent Data**: External API server → SvelteKit server → Component props
-3. **Player Stats**: Includes both current season and projected statistics
-4. **Position Filtering**: Server-side URL parameter filtering using SvelteKit load functions
-5. **Bid Management**: In-memory storage with localStorage persistence and server-side API
+2. **Free Agent Data**: External API server → SvelteKit server → Component props with URL parameter filtering
+3. **Player Stats**: Includes both current season and projected statistics with category-based organization
+4. **Position Filtering**: Server-side URL parameter handling for position-specific data loading
+5. **Bid Management**: Real-time bid creation, deletion, and synchronization across clients via SSE
+
+## UI/UX Design System
+
+### Header Layout Architecture
+All pages follow a consistent, clean header design pattern:
+
+**Desktop Layout**:
+- **Header Content**: Centered page title and subtitle
+- **User Navigation**: Compact navigation bar positioned absolutely to the right of header content
+- **Footer Sign-out**: Sign-out button relocated to footer, right-aligned to mirror navigation
+
+**Mobile Layout**: 
+- **Responsive Stack**: User navigation moves above page content
+- **Centered Footer**: Sign-out button centers on mobile devices
+- **Flexible Navigation**: Buttons wrap appropriately for smaller screens
+
+### Navigation Design
+- **Compact User Info**: Removed team name display for cleaner appearance
+- **Smaller Buttons**: Reduced padding (0.4rem x 0.6rem) and font size (0.75rem)
+- **Consistent Styling**: Blue navigation buttons with hover effects
+- **Cross-page Navigation**: Complete navigation between Home, Free Agents, and Bids
 
 ## Key Files and Structure
 

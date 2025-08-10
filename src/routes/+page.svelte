@@ -149,22 +149,27 @@
   }
 
   .header {
-    text-align: center;
     margin-bottom: 3rem;
     position: relative;
   }
 
+  .header-content {
+    text-align: center;
+  }
+
   .user-info {
     position: absolute;
-    top: 0;
+    top: 50%;
     right: 0;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
-    gap: 1rem;
-    background: rgba(30, 41, 59, 0.9);
-    padding: 0.75rem 1rem;
-    border-radius: 10px;
+    gap: 0.5rem;
+    background: rgba(30, 41, 59, 0.8);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.2);
+    font-size: 0.8rem;
   }
 
   .team-name {
@@ -173,13 +178,13 @@
     font-size: 0.9rem;
   }
 
-  .nav-btn, .sign-out-btn {
+  .nav-btn {
     background: rgba(59, 130, 246, 0.1);
     border: 1px solid rgba(59, 130, 246, 0.3);
     color: #3b82f6;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -187,15 +192,29 @@
     display: inline-block;
   }
 
-  .sign-out-btn {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
-  }
-
   .nav-btn:hover {
     background: rgba(59, 130, 246, 0.2);
     border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .footer {
+    margin-top: 4rem;
+    padding: 1rem 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .sign-out-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
 
   .sign-out-btn:hover {
@@ -567,12 +586,18 @@
       position: static;
       justify-content: center;
       margin-bottom: 1rem;
+      transform: none;
+      flex-wrap: wrap;
     }
 
     .header {
       display: flex;
       flex-direction: column;
       gap: 1rem;
+    }
+
+    .footer {
+      justify-content: center;
     }
 
     .teams-grid {
@@ -611,21 +636,19 @@
   <div class="header">
     {#if signedInTeam}
       <div class="user-info">
-        <span class="team-name">{signedInTeam.name}</span>
         <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
           Free Agents
         </a>
         <a href="/bids" class="nav-btn" data-sveltekit-preload-data="hover">
           Bids
         </a>
-        <button class="sign-out-btn" on:click={handleSignOut}>
-          Sign Out
-        </button>
       </div>
     {/if}
-    <h1 class="main-title">Aliquippa Keeper League</h1>
-    <p class="subtitle">Choose your team to get started</p>
-    <p class="league-info">League ID: 3925 • Season: 2025</p>
+    <div class="header-content">
+      <h1 class="main-title">Aliquippa Keeper League</h1>
+      <p class="subtitle">Choose your team to get started</p>
+      <p class="league-info">League ID: 3925 • Season: 2025</p>
+    </div>
   </div>
   
 
@@ -654,6 +677,14 @@
   {:else}
     <div class="no-teams">
       <p>No teams found. Make sure the FastAPI server is running on localhost:8000</p>
+    </div>
+  {/if}
+  
+  {#if signedInTeam}
+    <div class="footer">
+      <button class="sign-out-btn" on:click={handleSignOut}>
+        Sign Out
+      </button>
     </div>
   {/if}
 </div>
