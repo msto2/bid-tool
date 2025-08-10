@@ -125,9 +125,17 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 
 ### Responsive Design
 - **Mobile-First**: Optimized touch interactions
-- **Breakpoint System**: 480px, 768px, 1024px breakpoints
+- **Breakpoint System**: 480px, 768px, 1024px breakpoints  
 - **Flexible Layouts**: CSS Grid and Flexbox combinations
 - **Touch-Friendly**: Appropriate button sizes and spacing
+
+### Header Layout Design
+- **Clean Architecture**: Compact user navigation positioned to right of page title
+- **No Team Display**: Removed team name for cleaner appearance
+- **Desktop Layout**: Absolutely positioned navigation (top: 50%, right: 0)
+- **Mobile Layout**: Stacked navigation above page content
+- **Footer Sign-out**: Sign-out button moved to bottom footer, right-aligned
+- **Consistent Styling**: Small navigation buttons (0.75rem font, 0.4rem x 0.6rem padding)
 
 ## Integration Points
 

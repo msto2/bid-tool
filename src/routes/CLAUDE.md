@@ -143,9 +143,25 @@ The root routes directory contains the main application entry points, authentica
 - **Verification Integration**: Email/SMS delivery addresses
 
 ### Route Protection
-- **Free Agents**: Redirects authenticated users automatically
+- **No Auto-redirect**: Authenticated users can stay on home page (changed from automatic redirect)
 - **Session Validation**: Checks token validity and expiration
-- **Navigation Flow**: Seamless transitions between authenticated states
+- **Navigation Flow**: Manual navigation between pages with clean header design
+
+## Header Layout Design
+
+### Clean Architecture Implementation
+- **Compact Navigation**: User navigation positioned to right of page title (desktop)
+- **No Team Display**: Removed team name from navigation for cleaner appearance
+- **Desktop Layout**: Absolutely positioned navigation (top: 50%, right: 0, transform: translateY(-50%))
+- **Mobile Layout**: Stacked navigation above page content with center alignment
+- **Small Buttons**: Reduced navigation button size (0.75rem font, 0.4rem x 0.6rem padding)
+
+### Footer Sign-out
+- **Bottom Placement**: Sign-out button moved to footer section
+- **Right Alignment**: Mirrors navigation positioning on desktop
+- **Mobile Center**: Centers sign-out button on mobile devices
+- **Consistent Styling**: Maintains button design but in footer context
+- **Proper Spacing**: Top margin and border separator for visual hierarchy
 
 ## Development Considerations
 
