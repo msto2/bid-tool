@@ -1,4 +1,7 @@
 <script>
+  import PlayerSearch from './PlayerSearch.svelte';
+  import PlayerModal from './PlayerModal.svelte';
+
   export let selectedPosition = 'All';
   export let onPositionChange;
   export let loading = false;
@@ -17,22 +20,44 @@
     { id: 'K', name: 'K', color: '#f97316' }
   ];
 
+  let selectedPlayer = null;
+  let showPlayerModal = false;
+
   function handlePositionClick(position) {
     if (loading) return;
     selectedPosition = position.id;
     onPositionChange?.(position.id);
   }
+
+  function handlePlayerSelect(player) {
+    selectedPlayer = player;
+    showPlayerModal = true;
+  }
+
+  function handleModalClose() {
+    showPlayerModal = false;
+    selectedPlayer = null;
+  }
 </script>
 
 <style>
   .position-filter {
-    display: flex;
-    gap: 0.5rem;
     margin-bottom: 2rem;
     padding: 1rem;
     background: rgba(30, 41, 59, 0.5);
     border-radius: 12px;
     border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .search-section {
+    margin-bottom: .5rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .positions-section {
+    display: flex;
+    gap: 0.5rem;
     flex-wrap: wrap;
     align-items: center;
   }
@@ -113,19 +138,31 @@
 </style>
 
 <div class="position-filter">
-  <span class="filter-label">Filter by Position:</span>
-  {#each positions as position}
-    <button
-      class="position-btn"
-      class:active={selectedPosition === position.id}
-      style="--position-color: {position.color}"
-      on:click={() => handlePositionClick(position)}
-      disabled={loading}
-    >
-      {position.name}
-      {#if loading && selectedPosition === position.id}
-        <span class="loading-indicator"></span>
-      {/if}
-    </button>
-  {/each}
+  <div class="search-section">
+    <PlayerSearch onPlayerSelect={handlePlayerSelect} />
+  </div>
+  
+  <div class="positions-section">
+    <span class="filter-label">Filter by Position:</span>
+    {#each positions as position}
+      <button
+        class="position-btn"
+        class:active={selectedPosition === position.id}
+        style="--position-color: {position.color}"
+        on:click={() => handlePositionClick(position)}
+        disabled={loading}
+      >
+        {position.name}
+        {#if loading && selectedPosition === position.id}
+          <span class="loading-indicator"></span>
+        {/if}
+      </button>
+    {/each}
+  </div>
 </div>
+
+<PlayerModal 
+  player={selectedPlayer} 
+  bind:show={showPlayerModal} 
+  on:close={handleModalClose} 
+/>

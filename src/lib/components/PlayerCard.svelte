@@ -10,41 +10,35 @@
   let errorMessage = '';
 
   const statLabelsPassing = {
-    passingCompletions: "Passing Completions",
-    passingAttempts: "Passing Attempts",
-    passingCompletionPercentage: "Completion Percentage",
-    passingYards: "Passing Yards",
-    passingTouchdowns: "Passing Touchdowns",
-    passingInterceptions: "Interceptions",
-    passing40PlusYardTD: "40+ Yard Passing TDs",
-    passing50PlusYardTD: "50+ Yard Passing TDs",
-    passing300To399YardGame: "300-399 Passing Yard Games",
-    passing400PlusYardGame: "400+ Yard Games"
+    passingCompletions: "Completions",
+    passingAttempts: "Attempts",
+    passingCompletionPercentage: "Comp %",
+    passingYards: "Pass Yards",
+    passingTouchdowns: "Pass TDs",
+    passingInterceptions: "Int"
   };
 
   const statLabelsRushing = {
-    rushingAttempts: "Rushing Attempts",
-    rushingYards: "Rushing Yards",
-    rushingYardsPerAttempt: "Yards per Carry",
-    rushingTouchdowns: "Rushing Touchdowns",
-    rushing40PlusYardTD: "40+ Yard Rushing TDs",
-    rushing50PlusYardTD: "50+ Yard Rushing TDs",
-    rushing100To199YardGame: "100-199 Yard Games",
-    rushing200PlusYardGame: "200+ Yard Games"
+    rushingAttempts: "Carries",
+    rushingYards: "Rush Yards",
+    rushingYardsPerAttempt: "Yards/Carry",
+    rushingTouchdowns: "Rush TDs"
   };
 
   const statLabelReceiving = {
     receivingTargets: "Targets",
     receivingReceptions: "Receptions",
-    receivingYards: "Receiving Yards",
-    receivingYardsPerReception: "Yards per Reception",
-    receivingTouchdowns: "Receiving Touchdowns",
-    receiving40PlusYardTD: "40+ Yard Receiving TDs",
-    receiving50PlusYardTD: "50+ Yard Receiving TDs",
-    receiving100To199YardGame: "100-199 Yard Games (Receiving)"
+    receivingYards: "Rec Yards",
+    receivingYardsPerReception: "Yards/Rec",
+    receivingTouchdowns: "Receiving TDs"
   };
 
   function getRelevantStatLabels(position) {
+    // Handle null, undefined, or 'N/A' positions
+    if (!position || position === 'N/A' || position === 'Unknown Position') {
+      return {}; // Show no detailed stats for unknown positions
+    }
+    
     switch(position) {
       case 'QB':
         return {...statLabelsPassing, ...statLabelsRushing};
@@ -54,7 +48,7 @@
       case 'TE':
         return statLabelReceiving;
       default:
-        return {};
+        return {}; // Show no detailed stats for unknown positions
     }
   }
 
@@ -64,7 +58,13 @@
       rushing: [],
       receiving: []
     };
-    // console.log(stats);
+    
+    if (!stats) return {};
+    
+    // Handle null, undefined, or 'N/A' positions
+    if (!position || position === 'N/A' || position === 'Unknown Position') {
+      return {}; // Show no categorized stats for unknown positions
+    }
     
     // Process stats in the order defined by the statLabels objects
     // Passing stats in order
@@ -90,6 +90,7 @@
     
     // Filter based on position
     const result = {};
+    
     switch(position) {
       case 'QB':
         if (categories.passing.length > 0) result.passing = categories.passing;
@@ -102,6 +103,9 @@
       case 'WR':
       case 'TE':
         if (categories.receiving.length > 0) result.receiving = categories.receiving;
+        break;
+      default:
+        // For unknown positions, don't show categorized stats
         break;
     }
     
@@ -314,7 +318,7 @@
     text-align: center;
     min-height: 40px;
     max-height: 60px;
-    width: 8rem;
+    width: 6rem;
     padding: 0 0.1rem 0 0.1rem;
     display: flex;
     flex-direction: column;
@@ -502,6 +506,36 @@
     }
   }
 
+  .categories-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: flex-start;
+  }
+
+  .category-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .category-header {
+    margin-bottom: 0.1rem;
+    font-weight: 600;
+    color: #10b981;
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: .3rem;
+    text-align: center;
+  }
+
+  .category-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
   /* Desktop optimizations */
   @media (min-width: 1024px) {
     .breakdown-grid {
@@ -533,18 +567,51 @@
       gap: 1rem;
       min-width: 320px;
     }
+
+    .categories-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: flex-start;
+    }
+
+    .category-section {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: .5rem;
+    }
+
+    .category-stats {
+      gap: 0.3rem;
+    }
   }
 
   /* Mobile optimizations */
   @media (max-width: 767px) {
+    .player-card {
+      background: rgba(30, 41, 59, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: .25rem; 
+      position: relative;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .25rem;
+    }
+    .player-content{
+      padding: .5rem;
+    }
+
     .breakdown-grid {
-      gap: 0.2rem;
+      gap: 0.15rem;
     }
 
     .breakdown-item {
       min-height: 45px;
       width: 3.5rem;
-      padding: 0.2rem;
     }
 
     .breakdown-name {
@@ -615,62 +682,74 @@
           <!-- Projected Stats -->
           {#if player.stats.projected_breakdown}
             <div class="breakdown-section-title">Projected Stats</div>
-            {#each Object.entries(getStatsByCategory(player.stats.projected_breakdown, player.position)) as [category, stats]}
-              <div class="breakdown-category-title">{getCategoryLabel(category)}</div>
-              <div class="breakdown-grid">
-                {#each stats as [statName, value]}
-                  <div class="breakdown-item">
-                    <div class="breakdown-name">{getStatLabel(statName)}</div>
-                    <div class="breakdown-value">
-                      {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
-                       statName === 'passingYards' || statName === 'rushingYards' || statName === 'receivingYards' ? Math.round(value * 17): 
-                       Math.round(value)}
-                    </div>
+            <div class="categories-row">
+              {#each Object.entries(getStatsByCategory(player.stats.projected_breakdown, player.position)) as [category, stats]}
+                <div class="category-section">
+                  <div class="category-header">{getCategoryLabel(category)}</div>
+                  <div class="category-stats">
+                    {#each stats as [statName, value]}
+                      <div class="breakdown-item">
+                        <div class="breakdown-name">{getStatLabel(statName)}</div>
+                        <div class="breakdown-value">
+                          {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                           statName === 'passingYards' || statName === 'rushingYards' || statName === 'receivingYards' ? Math.round(value * 17): 
+                           Math.round(value)}
+                        </div>
+                      </div>
+                    {/each}
                   </div>
-                {/each}
-              </div>
-            {/each}
+                </div>
+              {/each}
+            </div>
           {/if}
 
           <!-- Current Season Stats -->
           {#if player.stats.breakdown && player.stats.breakdown.length > 0}
             <div class="breakdown-section-title">Current Season Stats</div>
-            {#each Object.entries(getStatsByCategory(player.stats.breakdown, player.position)) as [category, stats]}
-              <div class="breakdown-category-title">{getCategoryLabel(category)}</div>
-              <div class="breakdown-grid">
-                {#each stats as [statName, value]}
-                  <div class="breakdown-item">
-                    <div class="breakdown-name">{getStatLabel(statName)}</div>
-                    <div class="breakdown-value">
-                      {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
-                       statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
-                       Math.round(value)}
-                    </div>
+            <div class="categories-row">
+              {#each Object.entries(getStatsByCategory(player.stats.breakdown, player.position)) as [category, stats]}
+                <div class="category-section">
+                  <div class="category-header">{getCategoryLabel(category)}</div>
+                  <div class="category-stats">
+                    {#each stats as [statName, value]}
+                      <div class="breakdown-item">
+                        <div class="breakdown-name">{getStatLabel(statName)}</div>
+                        <div class="breakdown-value">
+                          {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                           statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
+                           Math.round(value)}
+                        </div>
+                      </div>
+                    {/each}
                   </div>
-                {/each}
-              </div>
-            {/each}
+                </div>
+              {/each}
+            </div>
           {/if}
 
           <!-- Historical Stats -->
           {#if player.historicalStats && player.historicalStats.length > 0}
             {#each player.historicalStats as yearStats}
               <div class="breakdown-year-title">{yearStats.year} Season</div>
-              {#each Object.entries(getStatsByCategory(yearStats.stats, player.position)) as [category, stats]}
-                <div class="breakdown-category-title">{getCategoryLabel(category)}</div>
-                <div class="breakdown-grid">
-                  {#each stats as [statName, value]}
-                    <div class="breakdown-item">
-                      <div class="breakdown-name">{getStatLabel(statName)}</div>
-                      <div class="breakdown-value">
-                        {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
-                         statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
-                         Math.round(value)}
-                      </div>
+              <div class="categories-row">
+                {#each Object.entries(getStatsByCategory(yearStats.stats, player.position)) as [category, stats]}
+                  <div class="category-section">
+                    <div class="category-header">{getCategoryLabel(category)}</div>
+                    <div class="category-stats">
+                      {#each stats as [statName, value]}
+                        <div class="breakdown-item">
+                          <div class="breakdown-name">{getStatLabel(statName)}</div>
+                          <div class="breakdown-value">
+                            {statName === 'passingCompletionPercentage' ? `${Math.round((value*100))}%` : 
+                             statName === 'rushingYardsPerAttempt' || statName === 'receivingYardsPerReception' ? Math.round(value * 10) / 10 : 
+                             Math.round(value)}
+                          </div>
+                        </div>
+                      {/each}
                     </div>
-                  {/each}
-                </div>
-              {/each}
+                  </div>
+                {/each}
+              </div>
             {/each}
           {:else if loadingHistoricalStats[player.id]}
             <div class="breakdown-section-title">Loading Historical Stats...</div>

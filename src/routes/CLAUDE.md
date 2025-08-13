@@ -8,9 +8,20 @@ The root routes directory contains the main application entry points, authentica
 
 ## File Structure
 
+### Core Route Files
 - `+page.server.js` - Home page server-side data loading
 - `+page.svelte` - Team selection and authentication interface
+
+### Sub-Routes
+- `free-agents/` - Free agent marketplace functionality
+- `bids/` - Bid management and viewing interface
+
+### API Endpoints  
 - `api/send-code/+server.js` - Verification code API endpoint
+- `api/bids/+server.js` - Bid CRUD operations and SSE broadcasting
+- `api/nfl-players/+server.js` - ESPN NFL player data and search
+- `api/player-stats/+server.js` - Historical player statistics
+- `api/websocket/+server.js` - Server-Sent Events for real-time updates
 
 ## Core Components
 

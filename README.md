@@ -1,58 +1,167 @@
-# Svelte library
+# Fantasy Football Bid Tool
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+A comprehensive web application for viewing and bidding on free agents in ESPN Fantasy Football leagues. This tool combines a SvelteKit frontend with ESPN Fantasy Football API integration to provide real-time player data, projections, and bidding functionality.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Quick Start (For Novices)
 
-## Creating a project
+### Prerequisites
 
-If you're seeing this, you've probably already done this step. Congrats!
+Before you begin, you need to install the following software on your computer:
 
-```sh
-# create a new project in the current directory
-npx sv create
+1. **Node.js** (version 18 or higher)
+   - Download from: https://nodejs.org
+   - Choose the "LTS" (Long Term Support) version
+   - Follow the installation wizard
 
-# create a new project in my-app
-npx sv create my-app
+2. **Python** (version 3.8 or higher)
+   - Download from: https://python.org
+   - **IMPORTANT**: During installation, check "Add Python to PATH"
+   - Choose "Install for all users" if prompted
+
+3. **Git** (optional but recommended)
+   - Download from: https://git-scm.com
+
+### Step 1: Get Your ESPN Cookies
+
+To access your private ESPN Fantasy Football league data, you need two cookies:
+
+1. **Open your web browser** and go to [ESPN Fantasy Football](https://fantasy.espn.com)
+2. **Sign in** to your ESPN account
+3. **Navigate** to your fantasy football league
+4. **Open Developer Tools**:
+   - **Chrome/Edge**: Press `F12` or right-click → "Inspect"
+   - **Firefox**: Press `F12` or right-click → "Inspect Element"
+5. **Go to the Application/Storage tab**:
+   - Chrome/Edge: Click "Application" tab
+   - Firefox: Click "Storage" tab
+6. **Find Cookies**:
+   - Expand "Cookies" in the left sidebar
+   - Click on "https://fantasy.espn.com"
+7. **Copy these two values**:
+   - Find `SWID` and copy its value (should look like `{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}`)
+   - Find `ESPN_S2` and copy its value (long string of characters)
+
+### Step 2: Set Up Environment Variables
+
+1. **Create a file** called `.env` in the project root folder
+2. **Add your ESPN cookies** to the file:
+   ```
+   SWID=your_swid_value_here
+   ESPN_S2=your_espn_s2_value_here
+   ```
+3. **Save the file**
+
+**Example .env file:**
+```
+SWID={12345678-1234-1234-1234-123456789012}
+ESPN_S2=AEBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-## Developing
+### Step 3: Start the Application
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+#### Option A: Use the Startup Script (Recommended)
 
-```sh
-npm run dev
+**Windows:**
+1. Double-click `start.bat` in the project folder
+2. The script will automatically install dependencies and start both servers
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+**Mac/Linux:**
+1. Open Terminal
+2. Navigate to the project folder: `cd path/to/bid-tool`
+3. Run: `./start.sh`
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+#### Option B: Manual Start
 
-## Building
+1. **Open two command prompt/terminal windows**
 
-To build your library:
+2. **In the first window**, start the ESPN API server:
+   ```sh
+   cd espn-api-0.45.1
+   pip install fastapi uvicorn espn-api requests
+   python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+   ```
 
-```sh
-npm pack
-```
+3. **In the second window**, start the SvelteKit development server:
+   ```sh
+   npm install
+   npm run dev
+   ```
 
-To create a production version of your showcase app:
+### Step 4: Access the Application
 
-```sh
-npm run build
-```
+Once both servers are running:
 
-You can preview the production build with `npm run preview`.
+- **Main Application**: Open http://localhost:5173 in your web browser
+- **API Server**: Running at http://localhost:8000 (you don't need to access this directly)
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## What You'll See
 
-## Publishing
+The application has three main sections:
 
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
+1. **Home** (`/`) - League overview with team information
+2. **Free Agents** (`/free-agents`) - Browse and bid on available players
+3. **Bids** (`/bids`) - View and manage your bids
 
-To publish your library to [npm](https://www.npmjs.com):
+## Troubleshooting
 
-```sh
-npm publish
-```
+### Common Issues
+
+**"Python is not recognized"**
+- Make sure Python is installed and added to your PATH
+- Restart your command prompt/terminal after installing Python
+
+**"Node is not recognized"**
+- Make sure Node.js is installed
+- Restart your command prompt/terminal after installing Node.js
+
+**"Permission denied" on Mac/Linux**
+- Run: `chmod +x start.sh` to make the script executable
+
+**ESPN API errors**
+- Double-check your SWID and ESPN_S2 values in the `.env` file
+- Make sure you're logged into ESPN in your browser
+- Try refreshing your ESPN cookies (they expire periodically)
+
+**Port already in use**
+- Make sure no other applications are using ports 5173 or 8000
+- Stop any running development servers and try again
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check that all prerequisites are installed correctly
+2. Verify your `.env` file has the correct ESPN cookie values
+3. Try restarting both servers
+4. Check the console/terminal output for error messages
+
+## For Developers
+
+### Development Commands
+
+- `npm run dev` - Start SvelteKit development server
+- `npm run build` - Build production version
+- `npm run preview` - Preview production build
+- `npm run check` - Type check TypeScript files
+
+### Project Structure
+
+- `src/lib/` - Reusable Svelte components
+- `src/routes/` - SvelteKit pages and API routes
+- `espn-api-0.45.1/` - Python ESPN API server
+- See `CLAUDE.md` for detailed architecture documentation
+
+### API Endpoints
+
+The Python server provides these endpoints:
+- `GET /teams` - League team data
+- `GET /free-agents` - Available players
+- `GET /free-agents-{position}` - Position-specific players
+- `GET /playerinfo` - Detailed player information
+- `GET /player-stats/{id}` - Historical player statistics
+
+### Environment Variables
+
+Required in `.env` file:
+- `SWID` - ESPN session cookie for user identification
+- `ESPN_S2` - ESPN session cookie for authentication

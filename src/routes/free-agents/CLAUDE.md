@@ -88,26 +88,44 @@ The free-agents page (`/free-agents`) is the core marketplace interface where us
 - Updates player object with new data
 - Triggers UI reactivity
 
-#### `addPlayer()`
-- Creates comprehensive bid object
-- Saves to localStorage with proper structure
-- Shows success feedback
-- Integrates with authentication system
+#### `handlePlayerBid(player, contract)`
+- Creates comprehensive bid object with player and contract details
+- Validates team authentication before submission
+- Makes API call to `/api/bids` endpoint
+- Shows success/error feedback via toast notifications
+- Integrates with real-time SSE broadcasting system
+
+### Component Integration
+
+#### PlayerCard Component System
+- **Main Display**: PlayerCard.svelte handles individual player presentation
+- **Statistical Breakdown**: Integrated expandable details with category-based organization  
+- **Bidding Integration**: Direct bidding interface within player cards
+- **Responsive Grid**: Flexbox-based breakdown grid with mobile optimizations
+
+#### PositionFilter Component
+- **Dynamic Filtering**: Real-time position navigation with loading states
+- **PlayerSearch Integration**: Embedded search functionality for player lookup
+- **URL Synchronization**: Position changes update URL and trigger data reloads
+
+#### Real-Time Features
+- **Server-Sent Events**: Live bid notifications across all connected clients
+- **Bid Broadcasting**: Automatic updates when other users place bids
+- **Notification System**: Non-intrusive toast notifications for bid activity
 
 ### Statistical Display System
 
-#### Category-Based Organization
-- **getStatsByCategory(stats, position)**: Organizes stats into passing, rushing, receiving
-- **getCategoryLabel(category)**: Maps category keys to display labels
-- **getStatLabel(stat)**: Converts stat keys to readable display names
-- **Position-Specific Logic**: Different categories for QB vs RB vs WR/TE
+#### Component-Level Organization
+- **PlayerCard Integration**: Statistical display handled by reusable PlayerCard components
+- **Category-Based Breakdown**: Passing, rushing, receiving stats organized by player position
+- **Historical Data Loading**: Lazy-loaded multi-year statistics with caching
+- **Unified Styling**: Consistent breakdown-grid styling across all components
 
-#### Breakdown Grid System  
-- **Category Sections**: Each row displays one stat category (passing, rushing, receiving)
-- **Centered Layout**: Category titles and year headers centered above stats grid
-- **Responsive Design**: Flexbox layout with center justification
-- **Compact Display**: Tighter horizontal spacing with smaller text
-- **Loading States**: Spinner animations during data fetch
+#### Position-Specific Logic
+- **QB Stats**: Passing primary, rushing secondary
+- **RB Stats**: Rushing primary, receiving secondary  
+- **WR/TE Stats**: Receiving focus
+- **Defensive Players**: Fallback display for non-offensive positions
 
 ## UI/UX Features
 

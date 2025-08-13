@@ -73,8 +73,24 @@ All pages follow a consistent, clean header design pattern:
 ### Core Application Files
 - `src/routes/+page.server.js` - ESPN league data fetching
 - `src/routes/+page.svelte` - League overview interface
-- `src/routes/free-agents/+page.server.js` - Free agent data fetching
+- `src/routes/free-agents/+page.server.js` - Free agent data fetching  
 - `src/routes/free-agents/+page.svelte` - Free agent marketplace interface
+- `src/routes/bids/+page.server.js` - Bid data management
+- `src/routes/bids/+page.svelte` - Bid viewing and management interface
+
+### Component Files
+- `src/lib/components/PlayerCard.svelte` - Player statistics display with bidding
+- `src/lib/components/PlayerModal.svelte` - Detailed player information modal
+- `src/lib/components/PlayerSearch.svelte` - NFL player search functionality
+- `src/lib/components/PositionFilter.svelte` - Position filtering with search
+- **See `src/lib/components/CLAUDE.md`** for detailed component documentation
+
+### API Routes
+- `src/routes/api/bids/+server.js` - Bid CRUD operations and SSE broadcasting
+- `src/routes/api/nfl-players/+server.js` - ESPN NFL player data API
+- `src/routes/api/player-stats/+server.js` - Historical player statistics
+- `src/routes/api/websocket/+server.js` - Server-Sent Events for real-time updates
+- **See `src/routes/api/CLAUDE.md`** for detailed API documentation
 
 ### Configuration Files
 - `package.json` - SvelteKit library configuration with ESPN API dependency
@@ -124,12 +140,53 @@ Free agent data includes:
 - Modal-based bidding interface (contract length and salary)
 - Expandable detailed statistics with season/projected breakdowns
 - Mobile-responsive grid layouts
+- Real-time bid notifications via Server-Sent Events (SSE)
+
+### Component Architecture
+
+#### PlayerCard Component (`src/lib/components/PlayerCard.svelte`)
+- **Statistical Display**: Fantasy points (projected/current), categorized stats breakdown
+- **Position-Specific Stats**: Passing, rushing, receiving stats organized by player position
+- **Historical Data**: Multi-year statistics with async loading and caching
+- **Bidding Interface**: Integrated modal for contract bidding (years + salary)
+- **Responsive Layout**: Flex-based breakdown grid with mobile optimizations
+
+#### PlayerModal Component (`src/lib/components/PlayerModal.svelte`)
+- **Detailed Player View**: Enhanced player information with headshot display
+- **Unified Styling**: Uses same breakdown-grid styles as PlayerCard for consistency
+- **Player Search Integration**: Accessible via PlayerSearch component
+- **API Compatibility**: Handles both ESPN API (string IDs) and external API (numeric IDs)
+- **Free Agent Validation**: Real-time verification of player availability before bidding
+
+#### PlayerSearch Component (`src/lib/components/PlayerSearch.svelte`)
+- **ESPN API Integration**: Searches comprehensive NFL player database
+- **Real-time Search**: Debounced input with dropdown results
+- **Modal Trigger**: Opens PlayerModal for detailed player information
+
+#### PositionFilter Component (`src/lib/components/PositionFilter.svelte`)
+- **Position Navigation**: All positions (QB, RB, WR, TE, DT, DE, LB, CB, S, K)
+- **Loading States**: Visual feedback during position changes
+- **PlayerSearch Integration**: Embedded search functionality
+
+### Bidding System Architecture
+
+#### Bid Management (`src/routes/api/bids/+server.js`)
+- **In-Memory Storage**: Demo-level bid persistence with cleanup validation
+- **Free Agent Validation**: Real-time checking against external API availability
+- **SSE Broadcasting**: Live notifications to all connected clients
+- **CRUD Operations**: Create, read, delete bids with proper error handling
+
+#### Bid Viewing (`src/routes/bids/+page.svelte`)
+- **Real-Time Updates**: Live bid list with SSE synchronization
+- **Bid Deletion**: Team owners can remove their own bids
+- **Responsive Layout**: Mobile-optimized bid cards with player information
 
 ### Styling Architecture
-- Custom CSS with CSS Grid and Flexbox
-- Dark theme with gradient accents
-- Mobile-first responsive design
-- Backdrop filter effects and modern UI patterns
+- **Consistent Design System**: Unified breakdown-grid components across PlayerCard and PlayerModal
+- **Dark Theme**: Gradient backgrounds with glassmorphism effects
+- **Mobile-First Design**: Responsive layouts with device-specific optimizations
+- **Component Reusability**: Shared CSS classes and styling patterns
+- **Modern UI Patterns**: Backdrop filters, hover effects, and smooth animations
 
 ## Package Information
 
