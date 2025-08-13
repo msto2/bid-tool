@@ -144,6 +144,11 @@ The application has three main sections:
 - Make sure no other applications are using ports 5173 or 8000
 - Stop any running development servers and try again
 
+**"This host is not allowed" when hosting on web**
+- Add your domain to `allowedHosts` in `vite.config.ts`
+- Example: `allowedHosts: ['your-domain.com']`
+- Restart the development server after making changes
+
 ### Getting Help
 
 If you encounter issues:
@@ -157,10 +162,29 @@ If you encounter issues:
 
 ### Development Commands
 
-- `npm run dev` - Start SvelteKit development server
+- `npm run dev` - Start SvelteKit development server (accessible on network)
 - `npm run build` - Build production version
 - `npm run preview` - Preview production build
 - `npm run check` - Type check TypeScript files
+
+### Server Configuration
+
+The Vite development server is configured with:
+- **Host**: `0.0.0.0` (accepts connections from any IP)
+- **Port**: `5173` (default SvelteKit port)
+- **Network Access**: App accessible from other devices on your local network
+- **Allowed Hosts**: Configured for `bids.triplepoint.me` domain
+
+### Web Hosting
+
+If hosting on a custom domain, update `vite.config.ts`:
+```typescript
+server: {
+  host: true, 
+  port: 5173,
+  allowedHosts: ['your-domain.com']
+}
+```
 
 ### Project Structure
 
