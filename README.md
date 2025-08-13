@@ -39,30 +39,6 @@ node --version
 python3 --version
 ```
 
-**CentOS/RHEL/Fedora:**
-```bash
-# Install Node.js (via NodeSource repository)
-curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
-sudo dnf install -y nodejs  # or 'yum install' for older versions
-
-# Install Python 3 and pip
-sudo dnf install python3 python3-pip  # or 'yum install' for older versions
-
-# Verify installations
-node --version
-python3 --version
-```
-
-**Arch Linux:**
-```bash
-# Install Node.js and Python
-sudo pacman -S nodejs npm python python-pip
-
-# Verify installations
-node --version
-python --version
-```
-
 ### Step 1: Get Your ESPN Cookies
 
 To access your private ESPN Fantasy Football league data, you need two cookies:
@@ -86,8 +62,6 @@ To access your private ESPN Fantasy Football league data, you need two cookies:
 ### Step 2: Set Up Environment Variables
 
 1. **Create a file** called `.env` in the project root folder
-   - **Windows**: Right-click in the folder → "New" → "Text Document" → Rename to `.env`
-   - **Mac/Linux**: Use `touch .env` in terminal or create with a text editor
 2. **Add your ESPN cookies** to the file:
    ```
    SWID=your_swid_value_here
@@ -100,11 +74,6 @@ To access your private ESPN Fantasy Football league data, you need two cookies:
 SWID={12345678-1234-1234-1234-123456789012}
 ESPN_S2=AEBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
-
-**Important Notes:**
-- The `.env` file must be a **text file**, not a folder
-- On Windows, make sure file extensions are visible and the file doesn't have `.txt` at the end
-- The file should be directly in the project root folder (same level as `package.json`)
 
 ### Step 3: Start the Application
 
@@ -141,7 +110,6 @@ ESPN_S2=AEBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Once both servers are running:
 
 - **Main Application**: Open http://localhost:5173 in your web browser
-- **Network Access**: The app is configured to accept connections from other devices on your network (useful for mobile testing)
 - **API Server**: Running at http://localhost:8000 (you don't need to access this directly)
 
 ## What You'll See
@@ -172,19 +140,9 @@ The application has three main sections:
 - Make sure you're logged into ESPN in your browser
 - Try refreshing your ESPN cookies (they expire periodically)
 
-**CORS errors when accessing from other devices**
-- The app now automatically proxies API requests to avoid CORS issues
-- Both servers (SvelteKit and Python API) are configured for network access
-- If you still see CORS errors, restart both servers
-
 **Port already in use**
 - Make sure no other applications are using ports 5173 or 8000
 - Stop any running development servers and try again
-
-**".env is a directory" error**
-- Delete the `.env` folder and create a `.env` **file** instead
-- On Windows: Make sure to create a text file, not a folder
-- Use a text editor like Notepad, VS Code, or terminal commands
 
 ### Getting Help
 
@@ -199,17 +157,10 @@ If you encounter issues:
 
 ### Development Commands
 
-- `npm run dev` - Start SvelteKit development server (accessible on network)
+- `npm run dev` - Start SvelteKit development server
 - `npm run build` - Build production version
 - `npm run preview` - Preview production build
 - `npm run check` - Type check TypeScript files
-
-### Server Configuration
-
-The Vite development server is configured with:
-- **Host**: `0.0.0.0` (accepts connections from any IP)
-- **Port**: `5173` (default SvelteKit port)
-- **Network Access**: App accessible from other devices on your local network
 
 ### Project Structure
 
