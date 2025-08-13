@@ -30,6 +30,11 @@ This is a FastAPI backend that serves as a bridge between the ESPN Fantasy Footb
 - **Supported Positions**: QB, RB, WR, TE, DT, DE, LB, CB, S, K
 - **Response Format**: `[{id, name, position, team, projected_points, total_points, avg_points, projected_avg_points, status, stats}]`
 
+### Player Validation
+- `GET /player-free-agent-status/{player_id}` - Validates if player is available as free agent
+- **Purpose**: Used by bidding system to ensure player availability before accepting bids
+- **Response Format**: `{playerId, isFreeAgent: boolean}`
+
 ### Historical Stats (Custom Implementation)
 - `GET /player-stats/{player_id}` - Returns 3 years of historical NFL stats
 - **Data Source**: ESPN Core API (`sports.core.api.espn.com`)
@@ -97,10 +102,18 @@ uvicorn api:app --reload --port 8000
 
 ## Integration with Frontend
 
-- Frontend expects all endpoints to be available on localhost:8000
-- Historical stats are fetched on-demand to avoid performance issues
-- Player IDs are used to link free agent data with historical statistics
-- Error responses should be handled gracefully by frontend components
+### SvelteKit Application Integration
+- **Port Requirement**: Frontend expects all endpoints available on localhost:8000
+- **Bid Validation**: `/player-free-agent-status/{player_id}` endpoint used by bid system for real-time validation
+- **Historical Stats**: Fetched on-demand via `/player-stats/{player_id}` to avoid performance issues
+- **Player ID Coordination**: Numeric player IDs link free agent data with historical statistics
+- **Error Handling**: Frontend components handle API failures gracefully with fallback states
+
+### Data Flow Architecture
+- **Free Agent Display**: Position-specific endpoints feed PlayerCard components
+- **Player Search**: PlayerModal integration for detailed player information
+- **Bid System**: Free agent validation ensures bid integrity before submission
+- **Real-time Updates**: Works alongside SvelteKit SSE system for live bid notifications
 
 ## Future Enhancements
 

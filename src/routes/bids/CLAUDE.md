@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## Overview
 
-The bids page (`/bids`) displays all submitted player bids across the league, sorted by bidder name. It provides comprehensive bid management and viewing functionality with localStorage persistence.
+The bids page (`/bids`) displays all submitted player bids across the league, sorted by bidder name. It provides comprehensive bid management and viewing functionality with real-time updates via Server-Sent Events (SSE) and API-based persistence.
 
 ## File Structure
 
@@ -25,9 +25,10 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 - **Team Integration**: Links team IDs to team names and contact information
 
 ### Data Management
-- **Storage**: Uses localStorage with key `'fantasyBids'`
-- **Structure**: Array of bid objects with comprehensive metadata
-- **Persistence**: Survives browser sessions and page refreshes
+- **API Storage**: Primary storage via `/api/bids` endpoint with in-memory persistence
+- **Real-time Sync**: Server-Sent Events for live updates across all clients
+- **Free Agent Validation**: Automatic cleanup of bids for players no longer available
+- **Persistence**: Server-based bid storage with automatic cleanup and validation
 
 ## Bid Data Structure
 
@@ -60,9 +61,9 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 ### Key Functions
 
 #### `loadBids()`
-- Retrieves bids from localStorage
-- Sorts by bidder name, then timestamp
-- Handles JSON parsing errors gracefully
+- Fetches bids from `/api/bids` endpoint
+- Automatically sorts by bidder name, then timestamp
+- Handles API errors gracefully with fallback to empty state
 
 #### `createTeamsMap()`
 - Maps team IDs from FastAPI to team names
@@ -71,7 +72,8 @@ The bids page (`/bids`) displays all submitted player bids across the league, so
 #### `deleteBid(bidId)`
 - Sends DELETE request to `/api/bids` with query parameters
 - Updates local bid list immediately on success
-- Handles API errors gracefully with console logging
+- Triggers SSE broadcast to notify other clients of deletion
+- Handles API errors gracefully with user feedback
 
 #### `canDeleteBid(bid)` (Reactive)
 - Checks if current user can delete a specific bid

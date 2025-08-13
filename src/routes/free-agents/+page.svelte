@@ -67,6 +67,12 @@
         }
         
         setupNotifications();
+        
+        // Pre-populate NFL players cache in background
+        fetch('/api/nfl-players').catch(() => {
+          // Silently ignore errors for background cache population
+          console.log('Background NFL players cache population failed (this is non-critical)');
+        });
       } catch (error) {
         localStorage.removeItem('signedInTeam');
         goto('/');
