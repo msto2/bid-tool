@@ -49,7 +49,7 @@
       const [playerDetailsResponse, statsResponse, projectedStatsResponse] = await Promise.all([
         fetch(`/api/nfl-players?playerId=${playerId}`),
         fetch(`/api/player-stats/${playerId}`),
-        fetch(`http://localhost:8000/playerinfo?playerId=${playerId}`)
+        fetch(`/api/playerinfo?playerId=${playerId}`)
       ]);
       
       let detailedPlayerData = { position: null, team: null, teamName: null };
@@ -260,7 +260,7 @@
     loadingFreeAgentStatus = true;
     
     try {
-      const response = await fetch(`http://localhost:8000/player-free-agent-status/${playerId}`);
+      const response = await fetch(`/api/player-free-agent-status/${playerId}`);
       if (response.ok) {
         const statusData = await response.json();
         playerFreeAgentStatus = statusData;
