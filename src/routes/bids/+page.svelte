@@ -154,6 +154,49 @@
     return signedInTeam.id === bid.bidder.teamId;
   };
 
+  function isInRevealWindow() {
+    const now = new Date();
+    
+    // Create dates in Eastern Time using Intl.DateTimeFormat
+    function getEasternTime(date) {
+      return new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    }
+    
+    function getNextDayAtTime(dayOfWeek, hour) {
+      const easternNow = getEasternTime(now);
+      const target = new Date(easternNow);
+      
+      // Find next occurrence of the target day
+      const currentDay = target.getDay(); // Sunday = 0
+      let daysUntil = (dayOfWeek - currentDay + 7) % 7;
+      
+      // If it's the same day, check if we're past the target time
+      if (daysUntil === 0) {
+        target.setHours(hour, 0, 0, 0);
+        if (easternNow >= target) {
+          daysUntil = 7; // Move to next week
+        }
+      }
+      
+      target.setDate(target.getDate() + daysUntil);
+      target.setHours(hour, 0, 0, 0);
+      
+      return target;
+    }
+    
+    const easternNow = getEasternTime(now);
+    const nextSunday9pm = getNextDayAtTime(0, 21); // Sunday = 0, 9 PM = 21
+    const nextWednesday9pm = getNextDayAtTime(3, 21); // Wednesday = 3, 9 PM = 21
+    
+    // Check if we're after Wednesday 9 PM EST and before the next Sunday 9 PM EST
+    const lastWednesday9pm = new Date(nextWednesday9pm);
+    lastWednesday9pm.setDate(lastWednesday9pm.getDate() - 7);
+    
+    return easternNow >= lastWednesday9pm && easternNow < nextSunday9pm;
+  }
+
+  let revealBids = isInRevealWindow();
+
 </script>
 
 <style>
@@ -565,26 +608,44 @@
           
           <!-- Player Name -->
           <div class="bid-item">
+            {#if canDeleteBid(bid) || revealBids}
             <div class="player-position">{bid.position} • {bid.team}</div>
             <div class="item-value player-name">{bid.playerName}</div>
+            {:else}
+            <div class="player-position">XX • XXX</div>
+            <div class="item-value player-name">Player Name</div>
+            {/if}
           </div>
           
           <!-- Contract Length -->
           <div class="bid-item">
             <div class="item-label">Contract</div>
+            {#if canDeleteBid(bid) || revealBids}
             <div class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</div>
+            {:else}
+            <div class="item-value contract-years"># yrs</div>
+            {/if}
           </div>
           
           <!-- Annual Salary -->
           <div class="bid-item">
             <div class="item-label">Annual</div>
+            {#if canDeleteBid(bid) || revealBids}
             <div class="item-value salary-value">{formatCurrency(bid.contract.salary)}</div>
+            {:else}
+            <div class="item-value salary-value">$</div>
+            {/if}
           </div>
           
           <!-- Total Value -->
+           
           <div class="bid-item">
             <div class="item-label">Total</div>
+            {#if canDeleteBid(bid) || revealBids}
             <div class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)}</div>
+            {:else}
+            <div class="item-value total-value">&lt;---&gt;</div>
+            {/if}
           </div>
           
           <!-- Submitted Date -->

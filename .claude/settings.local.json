@@ -7,6 +7,7 @@
       "Bash(timeout:*)",
       "Bash(python:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
