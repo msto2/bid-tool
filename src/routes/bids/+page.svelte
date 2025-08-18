@@ -37,6 +37,9 @@
       if (eventSource) {
         eventSource.close();
       }
+      if (revealTimer) {
+        clearTimeout(revealTimer);
+      }
     };
   });
 
@@ -195,7 +198,72 @@
     return easternNow >= lastWednesday9pm && easternNow < nextSunday9pm;
   }
 
-  let revealBids = isInRevealWindow();
+  let revealBids = false;
+  let sortedBids = [];
+  let revealedIndexes = new Set();
+  let revealTimer = null;
+  
+  // Initialize reveal state
+  $: {
+    const shouldReveal = isInRevealWindow();
+    if (shouldReveal && !revealBids) {
+      // Just entered reveal window - trigger animation
+      triggerRevealAnimation();
+    } else if (!shouldReveal && revealBids) {
+      // Left reveal window - hide bids immediately
+      revealBids = false;
+      revealedIndexes.clear();
+      if (revealTimer) {
+        clearTimeout(revealTimer);
+        revealTimer = null;
+      }
+    } else if (shouldReveal) {
+      // Already in reveal window - just update sorting
+      revealBids = true;
+      updateSortedBids();
+    }
+  }
+  
+  function updateSortedBids() {
+    if (!revealBids) return;
+    
+    // Group bids by player name and sort by total salary within each group
+    const grouped = {};
+    bids.forEach(bid => {
+      const totalSalary = bid.contract.salary * bid.contract.years;
+      if (!grouped[bid.playerName]) {
+        grouped[bid.playerName] = [];
+      }
+      grouped[bid.playerName].push({ ...bid, totalSalary });
+    });
+    
+    // Sort each group by total salary (highest first)
+    Object.keys(grouped).forEach(playerName => {
+      grouped[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
+    });
+    
+    // Flatten back to array, maintaining player groupings
+    sortedBids = Object.values(grouped).flat();
+  }
+  
+  function triggerRevealAnimation() {
+    revealBids = true;
+    updateSortedBids();
+    revealedIndexes.clear();
+    
+    // Stagger the reveal animation
+    sortedBids.forEach((_, index) => {
+      setTimeout(() => {
+        revealedIndexes.add(index);
+        revealedIndexes = new Set(revealedIndexes); // Trigger reactivity
+      }, index * 150); // 150ms delay between each reveal
+    });
+  }
+  
+  // Update sorted bids when regular bids change
+  $: if (bids && revealBids) {
+    updateSortedBids();
+  }
 
 </script>
 
@@ -339,6 +407,32 @@
     gap: 1rem;
     align-items: center;
     min-height: 50px;
+  }
+
+  .bid-card.revealing {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: revealBid 0.6s ease-out forwards;
+  }
+
+  @keyframes revealBid {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .player-group-header {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0 0.5rem 0;
+    font-weight: 600;
+    color: #3b82f6;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .bid-card:hover {
@@ -594,8 +688,17 @@
     </div>
 
     <div class="bids-grid">
-      {#each bids as bid}
-        <div class="bid-card">
+      {#each (revealBids ? sortedBids : bids) as bid, index}
+        {@const isRevealed = !revealBids || revealedIndexes.has(index)}
+        {@const showPlayerHeader = revealBids && (index === 0 || (sortedBids[index-1] && sortedBids[index-1].playerName !== bid.playerName))}
+        
+        {#if showPlayerHeader}
+          <div class="player-group-header">
+            {bid.playerName} - {bid.position} • {bid.team}
+          </div>
+        {/if}
+        
+        <div class="bid-card" class:revealing={revealBids && !isRevealed}>
           <!-- User Name -->
           <div class="bid-item">
             <div class="user-name-row">
