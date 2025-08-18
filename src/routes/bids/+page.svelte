@@ -61,6 +61,12 @@
         } else if (data.type === 'bid_deleted') {
           // Remove the deleted bid from the local list immediately for better UX
           bids = bids.filter(bid => bid.id !== data.bidId);
+        } else if (data.type === 'all_bids_cleared') {
+          // Clear all bids when they are cleared server-side
+          bids = [];
+          sortedBids = [];
+          revealedIndexes.clear();
+          revealBids = false;
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
@@ -160,42 +166,29 @@
   function isInRevealWindow() {
     const now = new Date();
     
-    // Create dates in Eastern Time using Intl.DateTimeFormat
+    // Create dates in Eastern Time
     function getEasternTime(date) {
       return new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
     }
     
-    function getNextDayAtTime(dayOfWeek, hour) {
-      const easternNow = getEasternTime(now);
-      const target = new Date(easternNow);
-      
-      // Find next occurrence of the target day
-      const currentDay = target.getDay(); // Sunday = 0
-      let daysUntil = (dayOfWeek - currentDay + 7) % 7;
-      
-      // If it's the same day, check if we're past the target time
-      if (daysUntil === 0) {
-        target.setHours(hour, 0, 0, 0);
-        if (easternNow >= target) {
-          daysUntil = 7; // Move to next week
-        }
-      }
-      
-      target.setDate(target.getDate() + daysUntil);
-      target.setHours(hour, 0, 0, 0);
-      
-      return target;
-    }
-    
     const easternNow = getEasternTime(now);
-    const nextSunday9pm = getNextDayAtTime(0, 21); // Sunday = 0, 9 PM = 21
-    const nextWednesday9pm = getNextDayAtTime(3, 21); // Wednesday = 3, 9 PM = 21
+    const currentDay = easternNow.getDay(); // Sunday = 0, Monday = 1, ..., Saturday = 6
+    const currentHour = easternNow.getHours();
     
-    // Check if we're after Wednesday 9 PM EST and before the next Sunday 9 PM EST
-    const lastWednesday9pm = new Date(nextWednesday9pm);
-    lastWednesday9pm.setDate(lastWednesday9pm.getDate() - 7);
-    
-    return easternNow >= lastWednesday9pm && easternNow < nextSunday9pm;
+    // Calculate which day of the week we are in the Wed 9pm -> Sun 9pm cycle
+    if (currentDay === 3) { // Wednesday
+      // On Wednesday: reveal if it's 9 PM or later
+      return currentHour >= 21;
+    } else if (currentDay === 4 || currentDay === 5 || currentDay === 6) { // Thursday, Friday, Saturday
+      // Thursday through Saturday: always in reveal window
+      return true;
+    } else if (currentDay === 0) { // Sunday
+      // On Sunday: reveal only if it's before 9 PM
+      return currentHour < 21;
+    } else { // Monday (1) or Tuesday (2)
+      // Monday and Tuesday: never in reveal window
+      return false;
+    }
   }
 
   let revealBids = false;
@@ -206,7 +199,12 @@
   // Initialize reveal state
   $: {
     const shouldReveal = isInRevealWindow();
-    if (shouldReveal && !revealBids) {
+    const shouldClearBids = isClearBidsTime();
+    
+    if (shouldClearBids) {
+      // Clear all bids at Sunday 9 PM
+      clearAllBids();
+    } else if (shouldReveal && !revealBids) {
       // Just entered reveal window - trigger animation
       triggerRevealAnimation();
     } else if (!shouldReveal && revealBids) {
@@ -221,6 +219,40 @@
       // Already in reveal window - just update sorting
       revealBids = true;
       updateSortedBids();
+    }
+  }
+  
+  function isClearBidsTime() {
+    const now = new Date();
+    const easternNow = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const currentDay = easternNow.getDay();
+    const currentHour = easternNow.getHours();
+    
+    // Clear bids at Sunday 9 PM exactly
+    return currentDay === 0 && currentHour === 21;
+  }
+  
+  async function clearAllBids() {
+    try {
+      // Call API to clear all bids
+      const response = await fetch('/api/bids?clear=all', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        bids = [];
+        sortedBids = [];
+        revealedIndexes.clear();
+        revealBids = false;
+        console.log('All bids cleared for new week');
+      } else {
+        console.error('Failed to clear bids:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error clearing bids:', error);
     }
   }
   
@@ -522,6 +554,29 @@
     align-items: center;
   }
 
+  .contract-row {
+    display: none; /* Hidden on desktop, shown on mobile */
+  }
+
+  .desktop-only {
+    display: flex; /* Shown on desktop, hidden on mobile */
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .contract-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .contract-separator {
+    color: #94a3b8;
+    font-size: 0.7rem;
+    margin: 0 0.2rem;
+  }
+
   /* Header row for labels */
   .bids-header {
     display: grid;
@@ -595,7 +650,7 @@
     .bid-card {
       grid-template-columns: 1fr;
       gap: 0.5rem;
-      padding: 1rem;
+      padding: .5rem;
       min-height: auto;
     }
 
@@ -604,7 +659,6 @@
       flex-direction: row;
       justify-content: space-between;
       align-items: center;
-      padding: 0.25rem 0;
       border-bottom: 1px solid rgba(148, 163, 184, 0.1);
     }
 
@@ -643,6 +697,28 @@
 
     .desktop-delete {
       display: none; /* Hide desktop delete button on mobile */
+    }
+
+    .contract-row {
+      display: flex; /* Show contract row on mobile */
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .desktop-only {
+      display: none; /* Hide individual contract items on mobile */
+    }
+
+    .contract-details {
+      font-size: 0.75rem;
+      gap: 0.3rem;
+    }
+
+    .contract-details .item-value {
+      font-size: 0.75rem;
     }
   }
 </style>
@@ -720,8 +796,28 @@
             {/if}
           </div>
           
-          <!-- Contract Length -->
-          <div class="bid-item">
+          <!-- Contract Details (Mobile: all on one row) -->
+          <div class="bid-item contract-row">
+            <div class="item-label">Contract</div>
+            <div class="contract-details">
+              {#if canDeleteBid(bid) || revealBids}
+              <span class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</span>
+              <span class="contract-separator">•</span>
+              <span class="item-value salary-value">{formatCurrency(bid.contract.salary)}/yr</span>
+              <span class="contract-separator">•</span>
+              <span class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)} total</span>
+              {:else}
+              <span class="item-value contract-years"># yrs</span>
+              <span class="contract-separator">•</span>
+              <span class="item-value salary-value">$/yr</span>
+              <span class="contract-separator">•</span>
+              <span class="item-value total-value">&lt;---&gt; total</span>
+              {/if}
+            </div>
+          </div>
+          
+          <!-- Individual items for desktop (hidden on mobile) -->
+          <div class="bid-item desktop-only">
             <div class="item-label">Contract</div>
             {#if canDeleteBid(bid) || revealBids}
             <div class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</div>
@@ -730,8 +826,7 @@
             {/if}
           </div>
           
-          <!-- Annual Salary -->
-          <div class="bid-item">
+          <div class="bid-item desktop-only">
             <div class="item-label">Annual</div>
             {#if canDeleteBid(bid) || revealBids}
             <div class="item-value salary-value">{formatCurrency(bid.contract.salary)}</div>
@@ -740,9 +835,7 @@
             {/if}
           </div>
           
-          <!-- Total Value -->
-           
-          <div class="bid-item">
+          <div class="bid-item desktop-only">
             <div class="item-label">Total</div>
             {#if canDeleteBid(bid) || revealBids}
             <div class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)}</div>
@@ -762,8 +855,6 @@
             <div class="bid-item desktop-delete">
               <button class="delete-btn" on:click={() => deleteBid(bid.id)} title="Delete bid">×</button>
             </div>
-          {:else}
-            <div class="bid-item"></div>
           {/if}
         </div>
       {/each}
