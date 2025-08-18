@@ -172,6 +172,28 @@ export async function POST({ request }) {
 export async function DELETE({ url }) {
 	try {
 		const bidId = url.searchParams.get('id');
+		const clearAll = url.searchParams.get('clear') === 'all';
+		
+		if (clearAll) {
+			// Clear all bids (for weekly reset)
+			const clearedCount = bidsStorage.length;
+			bidsStorage = [];
+			
+			// Broadcast that all bids were cleared
+			const notification = {
+				type: 'all_bids_cleared',
+				message: `All bids cleared for new week`,
+				timestamp: Date.now()
+			};
+			
+			try {
+				broadcastToSSEClients(notification);
+			} catch (error) {
+				console.error('Error broadcasting clear notification:', error);
+			}
+			
+			return json({ success: true, clearedCount });
+		}
 		
 		if (!bidId) {
 			return json({ error: 'Bid ID required' }, { status: 400 });
