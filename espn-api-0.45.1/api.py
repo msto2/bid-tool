@@ -95,7 +95,7 @@ def get_free_agents():
         for p in free_agents[:50]
     ]
 
-def get_free_agents_by_position(position: str, size: int = 15):
+def get_free_agents_by_position(position: str, size: int = 300):
     league = League(league_id=LEAGUE_ID, year=YEAR)
     free_agents = league.free_agents(position=position, size=size)
 
@@ -218,6 +218,30 @@ def fetch_player_stats_for_year(player_id: int, year: int) -> Dict[str, Any]:
                                     stats['receivingYards'] = stat_value
                                 elif 'touchdowns' in stat_name.lower():
                                     stats['receivingTouchdowns'] = stat_value
+                            
+                            elif category_name == 'defensive':
+                                if 'totaltackles' in stat_name.lower().replace(' ', '') or 'combinedtackles' in stat_name.lower().replace(' ', ''):
+                                    stats['defensiveTotalTackles'] = stat_value
+                                elif 'sacks' in stat_name.lower():
+                                    stats['defensiveSacks'] = stat_value
+                                elif 'fumblesForced' in stat_name.lower():
+                                    stats['defensiveForcedFumbles'] = stat_value
+                                elif 'fumblerecoveries' in stat_name.lower().replace(' ', '') or 'fumblesRecovered' in stat_name.lower().replace(' ', ''):
+                                    stats['defensiveFumbles'] = stat_value
+                                elif 'passdefended' in stat_name.lower().replace(' ', '') or 'passesdefended' in stat_name.lower().replace(' ', ''):
+                                    stats['defensivePassesDefensed'] = stat_value
+                                elif 'interceptions' in stat_name.lower():
+                                    stats['defensiveInterceptions'] = stat_value
+                            
+                            elif category_name == 'general':
+                                if stat_name.lower() == 'fumblesforced':
+                                    stats['defensiveForcedFumbles'] = stat_value
+                                elif stat_name.lower() == 'fumblesrecovered':
+                                    stats['defensiveFumbles'] = stat_value
+                            
+                            elif category_name == 'defensiveinterceptions':
+                                if 'interceptions' in stat_name.lower():
+                                    stats['defensiveInterceptions'] = stat_value
             
             # Calculate derived stats
             if 'passingCompletions' in stats and 'passingAttempts' in stats and stats['passingAttempts'] > 0:
