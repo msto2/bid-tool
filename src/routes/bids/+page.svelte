@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { contacts } from '$lib/data/contacts.js';
+  import { isSessionValidForDeployment, clearInvalidSession } from '$lib/deployment.js';
 
   export let data;
   const { teams } = data;
@@ -13,10 +14,11 @@
   let eventSource = null;
 
   onMount(() => {
-    // Check if user is signed in
+    // Check if user is signed in with valid deployment session
     if (browser) {
       const savedTeam = localStorage.getItem('signedInTeam');
-      if (!savedTeam) {
+      if (!savedTeam || !isSessionValidForDeployment(savedTeam)) {
+        clearInvalidSession();
         goto('/');
         return;
       }
@@ -26,7 +28,7 @@
         createTeamsMap();
         setupRealTimeUpdates();
       } catch (error) {
-        localStorage.removeItem('signedInTeam');
+        clearInvalidSession();
         goto('/');
         return;
       }
@@ -108,7 +110,7 @@
 
   function handleSignOut() {
     if (browser) {
-      localStorage.removeItem('signedInTeam');
+      clearInvalidSession();
       goto('/');
     }
   }

@@ -42,6 +42,7 @@ export interface SignedInTeam {
   id: string;
   name: string;
   signedInAt: number;
+  deploymentVersion: string;
 }
 
 // ===== BID MODELS =====
@@ -162,6 +163,14 @@ export interface BidFormData {
 export interface SearchFilters {
   position?: string;
   query?: string;
+}
+
+// ===== DEPLOYMENT MODELS =====
+
+export interface DeploymentSession {
+  deploymentVersion: string;
+  isValid: boolean;
+  reason?: 'expired' | 'old-deployment' | 'invalid-format';
 }
 
 // ===== ERROR MODELS =====

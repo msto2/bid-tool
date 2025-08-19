@@ -5,6 +5,7 @@
   import { page } from '$app/stores';
   import PositionFilter from '$lib/components/PositionFilter.svelte';
   import PlayerCard from '$lib/components/PlayerCard.svelte';
+  import { isSessionValidForDeployment, clearInvalidSession } from '$lib/deployment.js';
 
   export let data;
   
@@ -45,26 +46,17 @@
   }
 
   onMount(() => {
-    // Check if user is signed in
+    // Check if user is signed in with valid deployment session
     if (browser) {
       const savedTeam = localStorage.getItem('signedInTeam');
-      if (!savedTeam) {
+      if (!savedTeam || !isSessionValidForDeployment(savedTeam)) {
+        clearInvalidSession();
         goto('/');
         return;
       }
       
       try {
         signedInTeam = JSON.parse(savedTeam);
-        // Check if authentication is still valid
-        const signedInAt = signedInTeam.signedInAt;
-        const now = Date.now();
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        
-        if (now - signedInAt > maxAge) {
-          localStorage.removeItem('signedInTeam');
-          goto('/');
-          return;
-        }
         
         setupNotifications();
         
@@ -74,7 +66,7 @@
           console.log('Background NFL players cache population failed (this is non-critical)');
         });
       } catch (error) {
-        localStorage.removeItem('signedInTeam');
+        clearInvalidSession();
         goto('/');
         return;
       }
