@@ -5,7 +5,10 @@
   import { page } from '$app/stores';
   import PositionFilter from '$lib/components/PositionFilter.svelte';
   import PlayerCard from '$lib/components/PlayerCard.svelte';
-  import { isSessionValidForDeployment, clearInvalidSession } from '$lib/deployment.js';
+  import deploymentUtils from '$lib/deployment.js';
+  
+  // Destructure for easier use
+  const { isSessionValidForDeployment, clearInvalidSession } = deploymentUtils;
 
   export let data;
   

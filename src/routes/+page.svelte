@@ -3,7 +3,10 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { contacts } from '$lib/data/contacts.js';
-  import { isSessionValidForDeployment, clearInvalidSession, createSessionData, forceSessionReset } from '$lib/deployment.js';
+  import deploymentUtils from '$lib/deployment.js';
+  
+  // Destructure for easier use
+  const { isSessionValidForDeployment, clearInvalidSession, createSessionData, forceSessionReset } = deploymentUtils;
 
   export let data;
   const { teams } = data;

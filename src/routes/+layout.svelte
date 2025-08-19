@@ -2,17 +2,29 @@
   import { navigating } from '$app/stores';
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
-  import { forceSessionReset } from '$lib/deployment.js';
 
   // Global error handler for deployment-related issues
   onMount(() => {
     if (browser) {
+      // Simple localStorage cleanup function
+      const clearAllLocalStorage = () => {
+        try {
+          ['signedInTeam', 'playerCache', 'historicalStatsCache', 'bidCache', 'positionCache'].forEach(item => {
+            localStorage.removeItem(item);
+          });
+          sessionStorage.clear();
+          console.log('Cleared all storage data due to error');
+        } catch (error) {
+          console.error('Error clearing storage:', error);
+        }
+      };
+
       // Add global error handler for unhandled promise rejections
       window.addEventListener('unhandledrejection', (event) => {
         console.error('Unhandled promise rejection:', event.reason);
         if (event.reason?.message?.includes('Cannot read properties of undefined')) {
           console.log('Detected potential deployment session issue, clearing data...');
-          forceSessionReset();
+          clearAllLocalStorage();
           // Prevent the error from bubbling up
           event.preventDefault();
           // Reload the page after a brief delay
@@ -25,7 +37,7 @@
         console.error('Global error:', event.error);
         if (event.error?.message?.includes('Cannot read properties of undefined')) {
           console.log('Detected potential deployment session issue, clearing data...');
-          forceSessionReset();
+          clearAllLocalStorage();
           // Reload the page after a brief delay
           setTimeout(() => window.location.reload(), 500);
         }
