@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { contacts } from '$lib/data/contacts.js';
+  import { isSessionValidForDeployment, clearInvalidSession, createSessionData } from '$lib/deployment.js';
 
   export let data;
   const { teams } = data;
@@ -19,16 +20,19 @@
   let signedInTeam = null;
 
   onMount(() => {
-    // Check if user is already signed in, but don't redirect
+    // Check if user is already signed in with valid deployment session
     if (browser) {
       const savedTeam = localStorage.getItem('signedInTeam');
-      if (savedTeam) {
+      if (savedTeam && isSessionValidForDeployment(savedTeam)) {
         try {
           signedInTeam = JSON.parse(savedTeam);
         } catch (error) {
           // Invalid saved team data, remove it
-          localStorage.removeItem('signedInTeam');
+          clearInvalidSession();
         }
+      } else {
+        // Session is invalid (old deployment or expired), clear it
+        clearInvalidSession();
       }
     }
   });
@@ -96,13 +100,10 @@
       return;
     }
 
-    // Store authentication in localStorage
+    // Store authentication in localStorage with deployment version
     if (browser) {
-      localStorage.setItem('signedInTeam', JSON.stringify({
-        id: selectedTeam.id,
-        name: selectedTeam.team_name,
-        signedInAt: Date.now()
-      }));
+      const sessionData = createSessionData(selectedTeam.id, selectedTeam.team_name);
+      localStorage.setItem('signedInTeam', JSON.stringify(sessionData));
     }
 
     signInStep = 'success';
@@ -115,7 +116,7 @@
 
   function handleSignOut() {
     if (browser) {
-      localStorage.removeItem('signedInTeam');
+      clearInvalidSession();
       signedInTeam = null;
     }
   }
