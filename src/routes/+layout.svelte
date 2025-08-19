@@ -1,5 +1,37 @@
 <script>
   import { navigating } from '$app/stores';
+  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
+  import { forceSessionReset } from '$lib/deployment.js';
+
+  // Global error handler for deployment-related issues
+  onMount(() => {
+    if (browser) {
+      // Add global error handler for unhandled promise rejections
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled promise rejection:', event.reason);
+        if (event.reason?.message?.includes('Cannot read properties of undefined')) {
+          console.log('Detected potential deployment session issue, clearing data...');
+          forceSessionReset();
+          // Prevent the error from bubbling up
+          event.preventDefault();
+          // Reload the page after a brief delay
+          setTimeout(() => window.location.reload(), 500);
+        }
+      });
+
+      // Add global error handler for other errors
+      window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error);
+        if (event.error?.message?.includes('Cannot read properties of undefined')) {
+          console.log('Detected potential deployment session issue, clearing data...');
+          forceSessionReset();
+          // Reload the page after a brief delay
+          setTimeout(() => window.location.reload(), 500);
+        }
+      });
+    }
+  });
 </script>
 
 {#if $navigating}

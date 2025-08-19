@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { contacts } from '$lib/data/contacts.js';
-  import { isSessionValidForDeployment, clearInvalidSession, createSessionData } from '$lib/deployment.js';
+  import { isSessionValidForDeployment, clearInvalidSession, createSessionData, forceSessionReset } from '$lib/deployment.js';
 
   export let data;
   const { teams } = data;
@@ -22,17 +22,31 @@
   onMount(() => {
     // Check if user is already signed in with valid deployment session
     if (browser) {
-      const savedTeam = localStorage.getItem('signedInTeam');
-      if (savedTeam && isSessionValidForDeployment(savedTeam)) {
-        try {
-          signedInTeam = JSON.parse(savedTeam);
-        } catch (error) {
-          // Invalid saved team data, remove it
-          clearInvalidSession();
+      try {
+        const savedTeam = localStorage.getItem('signedInTeam');
+        
+        if (savedTeam && isSessionValidForDeployment(savedTeam)) {
+          try {
+            const teamData = JSON.parse(savedTeam);
+            // Double-check the parsed data is valid
+            if (teamData && teamData.id && teamData.name && teamData.deploymentVersion) {
+              signedInTeam = teamData;
+            } else {
+              console.log('Invalid team data structure after parsing');
+              forceSessionReset();
+            }
+          } catch (parseError) {
+            console.log('Error parsing saved team data:', parseError);
+            forceSessionReset();
+          }
+        } else {
+          // Session is invalid (old deployment or expired), clear it
+          console.log('Session validation failed, clearing...');
+          forceSessionReset();
         }
-      } else {
-        // Session is invalid (old deployment or expired), clear it
-        clearInvalidSession();
+      } catch (error) {
+        console.log('Error in session check:', error);
+        forceSessionReset();
       }
     }
   });
@@ -116,7 +130,7 @@
 
   function handleSignOut() {
     if (browser) {
-      clearInvalidSession();
+      forceSessionReset();
       signedInTeam = null;
     }
   }
