@@ -110,11 +110,4 @@ export function forceSessionReset() {
   }
 }
 
-// Export all functions as a default export as well for compatibility
-export default {
-  DEPLOYMENT_VERSION,
-  isSessionValidForDeployment,
-  clearInvalidSession,
-  createSessionData,
-  forceSessionReset
-};
+// All exports are already available as named exports above

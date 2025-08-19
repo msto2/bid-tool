@@ -3,10 +3,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { contacts } from '$lib/data/contacts.js';
-  import deploymentUtils from '$lib/deployment.js';
-  
-  // Destructure for easier use
-  const { isSessionValidForDeployment, clearInvalidSession, forceSessionReset } = deploymentUtils;
+  import { checkAndClearOldAuth, getSignedInTeam } from '$lib/simple-auth-reset.js';
 
   export let data;
   const { teams } = data;
@@ -17,21 +14,24 @@
   let eventSource = null;
 
   onMount(() => {
-    // Check if user is signed in with valid deployment session
+    // Check and clear old deployment data, then validate session
     if (browser) {
-      const savedTeam = localStorage.getItem('signedInTeam');
-      if (!savedTeam || !isSessionValidForDeployment(savedTeam)) {
-        clearInvalidSession();
-        goto('/');
-        return;
-      }
-      
       try {
-        signedInTeam = JSON.parse(savedTeam);
+        // Clear old deployment data first
+        checkAndClearOldAuth();
+        
+        // Get current signed in team
+        signedInTeam = getSignedInTeam();
+        
+        if (!signedInTeam) {
+          goto('/');
+          return;
+        }
+        
         createTeamsMap();
         setupRealTimeUpdates();
       } catch (error) {
-        clearInvalidSession();
+        console.log('Error in session check:', error);
         goto('/');
         return;
       }
@@ -113,7 +113,7 @@
 
   function handleSignOut() {
     if (browser) {
-      clearInvalidSession();
+      localStorage.removeItem('signedInTeam');
       goto('/');
     }
   }
