@@ -94,3 +94,19 @@ This directory contains SvelteKit API endpoints that provide backend functionali
 - `GET /free-agents` - Available players
 - `GET /free-agents-{position}` - Position-filtered players
 - `GET /playerinfo` - Detailed player information
+
+## Type Safety & Data Models
+
+### API Response Types
+All API endpoints return data conforming to types defined in `src/models/types.ts`:
+- **Player Interface**: Complete player data structure
+- **Team Interface**: League team information
+- **Bid Interface**: Bidding system data
+- **Historical Stats**: Multi-year player performance
+- **API Error**: Standardized error responses
+
+### Request/Response Validation
+- **Type Guards**: Runtime validation of incoming data
+- **Error Handling**: Typed error responses with proper HTTP status codes
+- **Data Transformation**: Converting between ESPN API format and application models
+- **See `src/models/types.ts`** for complete API data model definitions

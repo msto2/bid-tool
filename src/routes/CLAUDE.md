@@ -213,3 +213,23 @@ The root routes directory contains the main application entry points, authentica
 - **Role-Based Access**: Commissioner vs team owner permissions
 - **Audit Logging**: Track authentication and bid activities
 - **Data Encryption**: Enhanced security for sensitive data
+
+## Type Safety & Architecture Integration
+
+### Route Data Models
+All route load functions return strongly-typed data:
+- **HomePageData**: Team listing and authentication state
+- **FreeAgentsPageData**: Player listings and position filtering
+- **BidsPageData**: Bid listings and user session data
+
+### Component Integration
+- **Typed Props**: All page components receive strongly-typed data from load functions
+- **Form Validation**: Type-safe form handling with BidFormData and VerificationRequest models
+- **Error States**: Standardized error handling using APIError interface
+- **See `src/models/types.ts`** for complete page data and component type definitions
+
+### Architectural Patterns
+- **Server-Side Validation**: Type-safe data loading with proper error handling
+- **Real-time Communication**: Strongly-typed SSE message formats
+- **API Integration**: Type-safe external API communication
+- **See `src/models/architecture.md`** for complete system architecture documentation

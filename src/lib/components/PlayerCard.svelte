@@ -20,8 +20,8 @@
 
   const statLabelsRushing = {
     rushingAttempts: "Carries",
-    rushingYards: "Rush Yards",
-    rushingYardsPerAttempt: "Yards/Carry",
+    rushingYards: "Rush Yds",
+    rushingYardsPerAttempt: "Yds/Car",
     rushingTouchdowns: "Rush TDs"
   };
 
@@ -29,8 +29,17 @@
     receivingTargets: "Targets",
     receivingReceptions: "Receptions",
     receivingYards: "Rec Yards",
-    receivingYardsPerReception: "Yards/Rec",
+    receivingYardsPerReception: "Yds/Rec",
     receivingTouchdowns: "Receiving TDs"
+  };
+
+  const statLabelDefense= {
+    defensiveTotalTackles: "Total Tackles",
+    defensiveSacks: "Sacks",
+    defensiveForcedFumbles: "FF",
+    defensiveFumbles: "FR",
+    defensivePassesDefensed: "Pass Defends",
+    defensiveInterceptions: "INT"
   };
 
   function getRelevantStatLabels(position) {
@@ -47,6 +56,12 @@
       case 'WR':
       case 'TE':
         return statLabelReceiving;
+      case 'DT':
+      case 'DE':
+      case 'LB':
+      case 'CB':
+      case 'S':
+        return statLabelDefense;
       default:
         return {}; // Show no detailed stats for unknown positions
     }
@@ -56,7 +71,8 @@
     const categories = {
       passing: [],
       rushing: [],
-      receiving: []
+      receiving: [],
+      defensive: []
     };
     
     if (!stats) return {};
@@ -88,6 +104,13 @@
       }
     });
     
+    // Defensive stats in order
+    Object.keys(statLabelDefense).forEach(statKey => {
+      if (stats[statKey] !== null && stats[statKey] !== undefined) {
+        categories.defensive.push([statKey, stats[statKey]]);
+      }
+    });
+    
     // Filter based on position
     const result = {};
     
@@ -104,6 +127,13 @@
       case 'TE':
         if (categories.receiving.length > 0) result.receiving = categories.receiving;
         break;
+      case 'DT':
+      case 'DE':
+      case 'LB':
+      case 'CB':
+      case 'S':
+        if (categories.defensive.length > 0) result.defensive = categories.defensive;
+        break;
       default:
         // For unknown positions, don't show categorized stats
         break;
@@ -116,13 +146,14 @@
     const labels = {
       passing: 'Passing',
       rushing: 'Rushing', 
-      receiving: 'Receiving'
+      receiving: 'Receiving',
+      defensive: 'Defense'
     };
     return labels[category] || category;
   }
 
   function getStatLabel(statName) {
-    return statLabelsPassing[statName] || statLabelsRushing[statName] || statLabelReceiving[statName] || statName;
+    return statLabelsPassing[statName] || statLabelsRushing[statName] || statLabelReceiving[statName] || statLabelDefense[statName] || statName;
   }
 
   function openBidModal() {
@@ -611,7 +642,7 @@
 
     .breakdown-item {
       min-height: 45px;
-      width: 3.5rem;
+      width: 3rem;
     }
 
     .breakdown-name {
@@ -638,6 +669,12 @@
 
     .stat-value {
       font-size: 0.85rem;
+    }
+    .categories-row {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      align-items: center;
     }
   }
 </style>

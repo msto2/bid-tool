@@ -64,3 +64,17 @@ This directory contains reusable Svelte components for the Fantasy Football Bid 
 - **Loading States**: Visual feedback during async operations
 - **API Validation**: Real-time validation against external services
 - **User Feedback**: Clear error messages and loading indicators
+
+## Type Safety Integration
+
+### Component Props
+All components use strongly-typed props defined in `src/models/types.ts`:
+- **PlayerCardProps**: Includes Player interface, bid handlers, and caching state
+- **PlayerModalProps**: Modal state management and player data
+- **PositionFilterProps**: Position navigation and loading states
+
+### Data Models
+- **Player Interface**: Comprehensive player data structure with stats and historical data
+- **Statistical Models**: Position-specific stat interfaces (PassingStats, RushingStats, ReceivingStats, DefensiveStats)
+- **Component State**: Form data, error handling, and interaction models
+- **See `src/models/types.ts`** for complete type definitions and interfaces

@@ -92,6 +92,12 @@ All pages follow a consistent, clean header design pattern:
 - `src/routes/api/websocket/+server.js` - Server-Sent Events for real-time updates
 - **See `src/routes/api/CLAUDE.md`** for detailed API documentation
 
+### Data Models & Architecture
+- `src/models/types.ts` - Comprehensive TypeScript type definitions
+- `src/models/architecture.md` - System architecture diagrams and data flow documentation
+- `src/models/CLAUDE.md` - Models directory documentation and type system guidance
+- **See `src/models/CLAUDE.md`** for complete data model and architecture documentation
+
 ### Configuration Files
 - `package.json` - SvelteKit library configuration with ESPN API dependency
 - `svelte.config.js` - Standard SvelteKit configuration
@@ -125,7 +131,9 @@ Free agent data includes:
 - Basic info: name, position, team
 - Fantasy points: projected_points, projected_avg_points, total_points, avg_points
 - Detailed stats: current season breakdown and projected statistics
-- Position-specific stat categories (passing, rushing, receiving)
+- Position-specific stat categories (passing, rushing, receiving, defensive)
+- Historical statistics: Multi-year defensive and offensive performance data
+- **See `src/models/types.ts`** for complete Player interface and related data models
 
 ## UI Components and Features
 

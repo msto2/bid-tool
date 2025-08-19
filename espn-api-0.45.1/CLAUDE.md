@@ -115,6 +115,21 @@ uvicorn api:app --reload --port 8000
 - **Bid System**: Free agent validation ensures bid integrity before submission
 - **Real-time Updates**: Works alongside SvelteKit SSE system for live bid notifications
 
+## Type Integration with Frontend
+
+### Data Model Alignment
+The FastAPI backend returns data that aligns with frontend TypeScript models:
+- **Player Data**: Matches `Player` interface in `src/models/types.ts`
+- **Team Data**: Conforms to `Team` interface structure
+- **Historical Stats**: Follows `YearlyStats` and statistical model interfaces
+- **Error Responses**: Uses standardized `APIError` format
+
+### Statistical Data Mapping
+- **Defensive Stats**: Maps to `DefensiveStats` interface (defensiveTotalTackles, defensiveSacks, etc.)
+- **Offensive Stats**: Maps to position-specific interfaces (PassingStats, RushingStats, ReceivingStats)
+- **Derived Calculations**: Provides computed values like completion percentage and yards per attempt
+- **Multi-year Data**: Structured as `YearlyStats[]` for historical analysis
+
 ## Future Enhancements
 
 - Add caching for historical stats to reduce API calls
@@ -123,3 +138,4 @@ uvicorn api:app --reload --port 8000
 - Expand stat mapping to include additional ESPN stat IDs
 - Consider database integration for persistent data storage
 - Add stat validation to ensure data quality and consistency
+- **Type Safety**: Add Pydantic models for request/response validation matching frontend TypeScript types
