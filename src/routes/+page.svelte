@@ -3,10 +3,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { contacts } from '$lib/data/contacts.js';
-  import deploymentUtils from '$lib/deployment.js';
-  
-  // Destructure for easier use
-  const { isSessionValidForDeployment, clearInvalidSession, createSessionData, forceSessionReset } = deploymentUtils;
+  import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
 
   export let data;
   const { teams } = data;
@@ -23,33 +20,17 @@
   let signedInTeam = null;
 
   onMount(() => {
-    // Check if user is already signed in with valid deployment session
+    // Check and clear old deployment data, then get current session
     if (browser) {
       try {
-        const savedTeam = localStorage.getItem('signedInTeam');
+        // Clear old deployment data first
+        checkAndClearOldAuth();
         
-        if (savedTeam && isSessionValidForDeployment(savedTeam)) {
-          try {
-            const teamData = JSON.parse(savedTeam);
-            // Double-check the parsed data is valid
-            if (teamData && teamData.id && teamData.name && teamData.deploymentVersion) {
-              signedInTeam = teamData;
-            } else {
-              console.log('Invalid team data structure after parsing');
-              forceSessionReset();
-            }
-          } catch (parseError) {
-            console.log('Error parsing saved team data:', parseError);
-            forceSessionReset();
-          }
-        } else {
-          // Session is invalid (old deployment or expired), clear it
-          console.log('Session validation failed, clearing...');
-          forceSessionReset();
-        }
+        // Get current signed in team if any
+        signedInTeam = getSignedInTeam();
       } catch (error) {
         console.log('Error in session check:', error);
-        forceSessionReset();
+        signedInTeam = null;
       }
     }
   });
@@ -117,10 +98,9 @@
       return;
     }
 
-    // Store authentication in localStorage with deployment version
+    // Store authentication in localStorage with deployment tracking
     if (browser) {
-      const sessionData = createSessionData(selectedTeam.id, selectedTeam.team_name);
-      localStorage.setItem('signedInTeam', JSON.stringify(sessionData));
+      createAndSaveSession(selectedTeam.id, selectedTeam.team_name);
     }
 
     signInStep = 'success';
@@ -133,7 +113,7 @@
 
   function handleSignOut() {
     if (browser) {
-      forceSessionReset();
+      localStorage.removeItem('signedInTeam');
       signedInTeam = null;
     }
   }

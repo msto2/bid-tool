@@ -5,10 +5,7 @@
   import { page } from '$app/stores';
   import PositionFilter from '$lib/components/PositionFilter.svelte';
   import PlayerCard from '$lib/components/PlayerCard.svelte';
-  import deploymentUtils from '$lib/deployment.js';
-  
-  // Destructure for easier use
-  const { isSessionValidForDeployment, clearInvalidSession } = deploymentUtils;
+  import { checkAndClearOldAuth, getSignedInTeam } from '$lib/simple-auth-reset.js';
 
   export let data;
   
@@ -49,17 +46,19 @@
   }
 
   onMount(() => {
-    // Check if user is signed in with valid deployment session
+    // Check and clear old deployment data, then validate session
     if (browser) {
-      const savedTeam = localStorage.getItem('signedInTeam');
-      if (!savedTeam || !isSessionValidForDeployment(savedTeam)) {
-        clearInvalidSession();
-        goto('/');
-        return;
-      }
-      
       try {
-        signedInTeam = JSON.parse(savedTeam);
+        // Clear old deployment data first
+        checkAndClearOldAuth();
+        
+        // Get current signed in team
+        signedInTeam = getSignedInTeam();
+        
+        if (!signedInTeam) {
+          goto('/');
+          return;
+        }
         
         setupNotifications();
         
@@ -69,7 +68,7 @@
           console.log('Background NFL players cache population failed (this is non-critical)');
         });
       } catch (error) {
-        clearInvalidSession();
+        console.log('Error in session check:', error);
         goto('/');
         return;
       }
