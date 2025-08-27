@@ -29,6 +29,18 @@ if not exist "node_modules" (
         pause
         exit /b 1
     )
+) else (
+    REM Check if authentication dependencies are installed
+    call npm ls @getbrevo/brevo >nul 2>&1
+    if errorlevel 1 (
+        echo Installing authentication dependencies...
+        call npm install
+        if errorlevel 1 (
+            echo ERROR: Failed to install authentication dependencies
+            pause
+            exit /b 1
+        )
+    )
 )
 
 REM Check if Python dependencies are installed for the API
