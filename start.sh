@@ -25,6 +25,16 @@ if [ ! -d "node_modules" ]; then
         echo "ERROR: Failed to install npm dependencies"
         exit 1
     fi
+else
+    # Check if authentication dependencies are installed
+    if ! npm ls @getbrevo/brevo &> /dev/null; then
+        echo "Installing authentication dependencies..."
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to install authentication dependencies"
+            exit 1
+        fi
+    fi
 fi
 
 # Check if Python dependencies are installed for the API
