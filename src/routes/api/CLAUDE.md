@@ -42,10 +42,17 @@ This directory contains SvelteKit API endpoints that provide backend functionali
 - **Data**: Returns season-by-season statistical breakdowns
 
 ### `/api/send-code/+server.js`
-- **Purpose**: Code sharing functionality
+- **Purpose**: Email and SMS verification code delivery
 - **Methods**: POST
-- **Features**: Enables sharing of bid configurations or league data
-- **Integration**: Supports external communication features
+- **Features**:
+  - Brevo email integration with professional HTML templates
+  - SMS verification via TextBee.dev integration
+  - 6-digit verification code generation
+  - Contact information masking for privacy
+  - Environment-aware logging (development only)
+  - Secure production responses (no code exposure)
+- **Integration**: Powers the authentication system for team sign-in
+- **Security**: Production-ready with no verification code leakage
 
 ### `/api/websocket/+server.js`
 - **Purpose**: WebSocket connection management

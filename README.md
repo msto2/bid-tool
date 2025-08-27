@@ -62,10 +62,14 @@ To access your private ESPN Fantasy Football league data, you need two cookies:
 ### Step 2: Set Up Environment Variables
 
 1. **Create a file** called `.env` in the project root folder
-2. **Add your ESPN cookies** to the file:
+2. **Add your ESPN cookies, API keys, and team contacts** to the file:
    ```
    SWID=your_swid_value_here
    ESPN_S2=your_espn_s2_value_here
+   BREVO_API_KEY=your_brevo_api_key_here
+   TEXTBEE_API_KEY=your_textbee_api_key_here
+   TEXTBEE_DEVICE_ID=your_textbee_device_id_here
+   CONTACTS={"1":{"email":"team1@example.com","phone":"1234567890"},"2":{"email":"team2@example.com","phone":"0987654321"}}
    ```
 3. **Save the file**
 
@@ -73,7 +77,42 @@ To access your private ESPN Fantasy Football league data, you need two cookies:
 ```
 SWID={12345678-1234-1234-1234-123456789012}
 ESPN_S2=AEBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+BREVO_API_KEY=xkeysib-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxx
+TEXTBEE_API_KEY=your-textbee-api-key-here
+TEXTBEE_DEVICE_ID=your-textbee-device-id-here
+CONTACTS={"1":{"email":"team1@example.com","phone":"1234567890"},"2":{"email":"team2@example.com","phone":"0987654321"}}
 ```
+
+#### Setting Up Team Contacts
+
+The `CONTACTS` environment variable contains team contact information for email and SMS verification:
+
+- **Format**: JSON string mapping team IDs to contact objects
+- **Structure**: `{"teamId": {"email": "address", "phone": "number"}}`
+- **Team IDs**: Match the team IDs from your FastAPI backend
+- **Phone Numbers**: Use full numbers without special formatting (e.g., "1234567890")
+- **Email Addresses**: Valid email addresses for verification codes
+
+#### Getting Your Brevo API Key (For Email Authentication)
+
+The application uses Brevo (formerly Sendinblue) for sending email verification codes:
+
+1. **Create a Brevo account** at https://www.brevo.com
+2. **Go to SMTP & API settings** in your account dashboard
+3. **Create a new API key** with transactional email permissions
+4. **Copy the API key** (starts with `xkeysib-`) and add it to your `.env` file
+5. **Verify a sender email** in your Brevo account for sending emails
+
+#### Getting Your TextBee Credentials (For SMS Authentication)
+
+The application uses TextBee.dev for sending SMS verification codes:
+
+1. **Create a TextBee account** at https://textbee.dev
+2. **Set up your device** and get your device ID from the dashboard
+3. **Generate an API key** in your account settings
+4. **Copy both values** and add them to your `.env` file:
+   - `TEXTBEE_API_KEY`: Your TextBee API key
+   - `TEXTBEE_DEVICE_ID`: Your TextBee device ID
 
 ### Step 3: Start the Application
 
@@ -116,9 +155,20 @@ Once both servers are running:
 
 The application has three main sections:
 
-1. **Home** (`/`) - League overview with team information
+1. **Home** (`/`) - League overview with team selection and email/SMS authentication
 2. **Free Agents** (`/free-agents`) - Browse and bid on available players
 3. **Bids** (`/bids`) - View and manage your bids
+
+### Authentication System
+
+The application features a comprehensive, production-ready authentication system:
+
+- **Team Selection**: Choose your fantasy team from the league roster
+- **Email Verification**: Receive verification codes via Brevo email service
+- **SMS Verification**: Receive verification codes via TextBee.dev SMS service
+- **Session Management**: Persistent login sessions with automatic expiry
+- **Security**: No verification codes displayed on screen - users must check email/SMS
+- **Environment-Aware**: Development mode includes logging for testing, production mode is secure
 
 ## Troubleshooting
 
@@ -139,6 +189,12 @@ The application has three main sections:
 - Double-check your SWID and ESPN_S2 values in the `.env` file
 - Make sure you're logged into ESPN in your browser
 - Try refreshing your ESPN cookies (they expire periodically)
+
+**Authentication Issues**
+- **Email not received**: Check your Brevo account settings and verify sender email
+- **SMS not received**: Verify your TextBee device is connected and API credentials are correct
+- **"Missing contact information"**: Ensure all team IDs have corresponding entries in the CONTACTS environment variable
+- **Invalid verification codes**: Codes expire after 10 minutes, request a new one if needed
 
 **Port already in use**
 - Make sure no other applications are using ports 5173 or 8000
@@ -166,6 +222,18 @@ If you encounter issues:
 - `npm run build` - Build production version
 - `npm run preview` - Preview production build
 - `npm run check` - Type check TypeScript files
+
+### Development vs Production
+
+**Development Mode** (`npm run dev`):
+- Verification codes logged to console for testing
+- API responses include verification codes for development tools
+- Enhanced error logging and debugging information
+
+**Production Mode** (`npm run build` + `npm run preview`):
+- No verification codes logged or displayed anywhere
+- Secure API responses without sensitive information
+- Production-optimized builds and error handling
 
 ### Server Configuration
 
@@ -207,3 +275,7 @@ The Python server provides these endpoints:
 Required in `.env` file:
 - `SWID` - ESPN session cookie for user identification
 - `ESPN_S2` - ESPN session cookie for authentication
+- `BREVO_API_KEY` - Brevo API key for email verification (starts with `xkeysib-`)
+- `TEXTBEE_API_KEY` - TextBee API key for SMS verification
+- `TEXTBEE_DEVICE_ID` - TextBee device ID for SMS sending
+- `CONTACTS` - JSON string with team contact information for authentication

@@ -49,10 +49,14 @@ cd ..
 if not exist ".env" (
     echo.
     echo WARNING: .env file not found!
-    echo You need to create a .env file with your ESPN credentials:
+    echo You need to create a .env file with your ESPN credentials and API keys:
     echo.
     echo SWID=your_swid_cookie_value
     echo ESPN_S2=your_espn_s2_cookie_value
+    echo BREVO_API_KEY=your_brevo_api_key_here
+    echo TEXTBEE_API_KEY=your_textbee_api_key_here
+    echo TEXTBEE_DEVICE_ID=your_textbee_device_id_here
+    echo CONTACTS={"1":{"email":"team1@example.com","phone":"1234567890"}}
     echo.
     echo Please check the README.md for instructions on how to get these values.
     pause
