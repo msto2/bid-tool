@@ -1,3 +1,5 @@
+import { CONTACTS } from '$env/static/private';
+
 /** @type {import('./$types.d.ts').PageServerLoad} */
 export async function load() {
   try {
@@ -10,13 +12,18 @@ export async function load() {
     
     const teams = await teamsRes.json();
     
+    // Parse contacts from environment variable
+    const contacts = JSON.parse(CONTACTS);
+    
     return {
-      teams
+      teams,
+      contacts
     };
   } catch (error) {
     console.error('Error fetching teams:', error);
     return {
-      teams: []
+      teams: [],
+      contacts: {}
     };
   }
 }

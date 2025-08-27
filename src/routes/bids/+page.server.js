@@ -1,3 +1,5 @@
+import { CONTACTS } from '$env/static/private';
+
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ fetch, setHeaders }) {
   // Set cache headers for better performance
@@ -14,15 +16,20 @@ export async function load({ fetch, setHeaders }) {
     const teams = teamsRes.ok ? await teamsRes.json() : [];
     const bids = bidsRes.ok ? await bidsRes.json() : [];
     
+    // Parse contacts from environment variable
+    const contacts = JSON.parse(CONTACTS);
+    
     return {
       teams,
-      bids
+      bids,
+      contacts
     };
   } catch (error) {
     console.error('Error fetching data:', error);
     return {
       teams: [],
-      bids: []
+      bids: [],
+      contacts: {}
     };
   }
 }

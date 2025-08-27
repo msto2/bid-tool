@@ -2,11 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { contacts } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
 
   export let data;
-  const { teams } = data;
+  const { teams, contacts } = data;
 
   let showSignInModal = false;
   let selectedTeam = null;
@@ -527,18 +526,6 @@
     margin-bottom: 1rem;
   }
 
-  .dev-code {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 6px;
-    padding: 0.75rem;
-    margin: 1rem 0;
-    text-align: center;
-    font-family: monospace;
-    font-size: 1.2rem;
-    letter-spacing: 0.2rem;
-    color: #3b82f6;
-  }
 
   .spinner {
     width: 16px;
@@ -755,11 +742,6 @@
           </div>
         </div>
 
-        {#if verificationCode}
-          <div class="dev-code">
-            Dev Code: {verificationCode}
-          </div>
-        {/if}
 
         <div class="form-group">
           <div class="form-label">Verification Code:</div>
