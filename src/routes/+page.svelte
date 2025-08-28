@@ -154,7 +154,7 @@
     text-align: center;
   }
 
-  .user-info {
+   .user-info {
     position: absolute;
     top: 50%;
     right: 0;
@@ -162,10 +162,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(30, 41, 59, 0.8);
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
     font-size: 0.8rem;
   }
 
