@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { contacts } from '$lib/data/contacts.js';
+  import { contacts as contactsData } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
   import { checkCacheVersion } from '$lib/version.js';
   
@@ -10,7 +10,7 @@
   export let data = null;
   
   let teams = [];
-  let contacts = {};
+  let contacts = contactsData || {}; // Initialize with static data
   let mounted = false;
   let loading = true;
   let error = null;
@@ -44,14 +44,18 @@
         if (data && data.teams) {
           console.log('[PAGE] Using server data as fallback');
           teams = data.teams;
-          contacts = data.contacts || {};
+          if (data.contacts && Object.keys(data.contacts).length > 0) {
+            contacts = { ...contacts, ...data.contacts };
+          }
         } else {
           throw new Error(`Failed to load teams: ${response.status}`);
         }
       } else {
         const result = await response.json();
         teams = result.teams || [];
-        contacts = result.contacts || {};
+        if (result.contacts && Object.keys(result.contacts).length > 0) {
+          contacts = { ...contacts, ...result.contacts };
+        }
         console.log(`[PAGE] Loaded ${teams.length} teams client-side`);
       }
       
@@ -66,7 +70,9 @@
       if (data && data.teams) {
         console.log('[PAGE] Using server data as last resort');
         teams = data.teams;
-        contacts = data.contacts || {};
+        if (data.contacts && Object.keys(data.contacts).length > 0) {
+          contacts = { ...contacts, ...data.contacts };
+        }
         error = null;
       }
     }
