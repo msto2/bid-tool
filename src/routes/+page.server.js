@@ -1,3 +1,5 @@
+import { CONTACTS } from '$env/static/private';
+
 /** @type {import('./$types.d.ts').PageServerLoad} */
 export async function load() {
   try {
@@ -74,22 +76,16 @@ export async function load() {
         { id: "4", team_name: "Team Delta", wins: 0, losses: 0, points_for: 0 }
       ];
     }
-    // Fetch teams from FastAPI backend
-    const teamsRes = await fetch('http://localhost:8000/teams');
-    
-    if (!teamsRes.ok) {
-      throw new Error('Failed to fetch teams data');
-    }
-    
-    const teams = await teamsRes.json();
     
     return {
-      teams
+      teams,
+      contacts
     };
   } catch (error) {
     console.error('Error fetching teams:', error);
     return {
-      teams: []
+      teams: [],
+      contacts: {}
     };
   }
 }
