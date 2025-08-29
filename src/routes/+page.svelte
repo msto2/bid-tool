@@ -2,6 +2,9 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
+  import { contacts } from '$lib/data/contacts.js';
+  import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
+  import { checkCacheVersion } from '$lib/version.js';
   
   // Client-side only approach to avoid hydration issues
   export let data = null;
@@ -24,7 +27,6 @@
   let errorMessage = '';
 
   let signedInTeam = null;
-  let mounted = false;
 
   onMount(async () => {
     console.log('[PAGE] onMount starting (client-side only)...');
@@ -67,6 +69,25 @@
         contacts = data.contacts || {};
         error = null;
       }
+    }
+    
+    // Initialize authentication
+    try {
+      console.log('[PAGE] Setting up authentication...');
+      
+      // Check cache version first - clears everything if version changed
+      checkCacheVersion();
+      
+      // Clear old deployment data
+      checkAndClearOldAuth();
+      
+      // Get current signed in team if any
+      signedInTeam = getSignedInTeam();
+      
+      console.log('[PAGE] Authentication setup complete, signedInTeam:', signedInTeam);
+    } catch (authError) {
+      console.error('[PAGE] Error in session check:', authError);
+      signedInTeam = null;
     }
     
     console.log('[PAGE] onMount complete, teams:', teams.length);
