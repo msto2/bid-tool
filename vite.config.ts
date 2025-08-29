@@ -5,7 +5,6 @@ export default defineConfig({
 	server: {
 		host: true, 
 		port: 5173,
-		https: true, // Enable HTTPS for external access
 		allowedHosts: ['bids.triplepoint.me'],
 		hmr: {
 			port: 5173,
