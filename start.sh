@@ -117,6 +117,17 @@ fi
 
 echo "Starting SvelteKit development server..."
 cd ..
+
+# Give the API server a bit more time to fully initialize
+sleep 2
+
+# Test one more time before starting SvelteKit to ensure API is ready
+if curl -s http://127.0.0.1:8000/teams > /dev/null 2>&1; then
+    echo "✓ API server confirmed ready, starting SvelteKit..."
+else
+    echo "⚠ API server may still be initializing..."
+fi
+
 npm run dev &
 SVELTE_PID=$!
 

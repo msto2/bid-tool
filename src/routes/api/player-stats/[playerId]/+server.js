@@ -10,7 +10,7 @@ export async function GET({ params }) {
 
 	try {
 		// Proxy the request to the external API server
-		const response = await fetch(`http://localhost:8000/player-stats/${playerId}`);
+		const response = await fetch(`http://127.0.0.1:8000/player-stats/${playerId}`);
 		
 		if (!response.ok) {
 			throw new Error(`External API responded with status: ${response.status}`);

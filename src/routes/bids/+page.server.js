@@ -49,7 +49,7 @@ export async function load({ fetch, setHeaders }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
-      const teamsRes = await fetch('http://localhost:8000/teams', {
+      const teamsRes = await fetch('http://127.0.0.1:8000/teams', {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -59,6 +59,7 @@ export async function load({ fetch, setHeaders }) {
       }
     } catch (error) {
       console.log('FastAPI not available, using fallback team data');
+      console.log('Error details:', error.message);
       // Provide fallback team data
       teams = [
         { id: "1", team_name: "Team Alpha", wins: 0, losses: 0, points_for: 0 },

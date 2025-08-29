@@ -57,16 +57,16 @@ async function getCurrentFreeAgents() {
   try {
     // Use Promise.allSettled for better error handling
     const responses = await Promise.allSettled([
-      fetch('http://localhost:8000/free-agents-qb'),
-      fetch('http://localhost:8000/free-agents-rb'),
-      fetch('http://localhost:8000/free-agents-wr'),
-      fetch('http://localhost:8000/free-agents-te'),
-      fetch('http://localhost:8000/free-agents-dt'),
-      fetch('http://localhost:8000/free-agents-de'),
-      fetch('http://localhost:8000/free-agents-lb'),
-      fetch('http://localhost:8000/free-agents-cb'),
-      fetch('http://localhost:8000/free-agents-s'),
-      fetch('http://localhost:8000/free-agents-k')
+      fetch('http://127.0.0.1:8000/free-agents-qb'),
+      fetch('http://127.0.0.1:8000/free-agents-rb'),
+      fetch('http://127.0.0.1:8000/free-agents-wr'),
+      fetch('http://127.0.0.1:8000/free-agents-te'),
+      fetch('http://127.0.0.1:8000/free-agents-dt'),
+      fetch('http://127.0.0.1:8000/free-agents-de'),
+      fetch('http://127.0.0.1:8000/free-agents-lb'),
+      fetch('http://127.0.0.1:8000/free-agents-cb'),
+      fetch('http://127.0.0.1:8000/free-agents-s'),
+      fetch('http://127.0.0.1:8000/free-agents-k')
     ]);
     
     const allPlayers = [];

@@ -16,13 +16,13 @@ export async function load({ fetch, setHeaders, url }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      let freeAgentsUrl = 'http://localhost:8000/free-agents';
+      let freeAgentsUrl = 'http://127.0.0.1:8000/free-agents';
       if (position && position !== 'All') {
-        freeAgentsUrl = `http://localhost:8000/free-agents-${position.toLowerCase()}`;
+        freeAgentsUrl = `http://127.0.0.1:8000/free-agents-${position.toLowerCase()}`;
       }
       
       const [teamsRes, freeAgentsRes] = await Promise.all([
-        fetch('http://localhost:8000/teams', { signal: controller.signal }),
+        fetch('http://127.0.0.1:8000/teams', { signal: controller.signal }),
         fetch(freeAgentsUrl, { signal: controller.signal })
       ]);
       clearTimeout(timeoutId);
