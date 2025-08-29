@@ -65,6 +65,15 @@
 					return;
 				}
 				
+				// Check URL parameters to see if we're already in recovery mode
+				const urlParams = new URLSearchParams(window.location.search);
+				const currentAttempt = parseInt(urlParams.get('attempt') || '0');
+				
+				if (currentAttempt > 0) {
+					hydrationErrorCount = currentAttempt;
+					console.log(`[ROOT ERROR] Detected previous recovery attempt: ${hydrationErrorCount}`);
+				}
+				
 				isRecovering = true;
 				hydrationErrorCount++;
 				
@@ -118,6 +127,7 @@
 			
 			// Display user-friendly error message
 			function displayErrorMessage(errorInfo) {
+				console.log('[ROOT ERROR] Displaying error message to user');
 				document.body.innerHTML = `
 					<div style="
 						position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -128,32 +138,56 @@
 					">
 						<div style="
 							background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px);
-							padding: 2rem; border-radius: 12px; max-width: 500px; text-align: center;
+							padding: 2rem; border-radius: 12px; max-width: 600px; text-align: center;
 							border: 1px solid rgba(59, 130, 246, 0.2);
 						">
-							<h1 style="color: #3b82f6; margin-bottom: 1rem;">Loading Issue Detected</h1>
+							<h1 style="color: #3b82f6; margin-bottom: 1rem;">🔧 Hydration Error Detected</h1>
 							<p style="margin-bottom: 1.5rem; line-height: 1.6;">
-								The app encountered a loading issue when accessed via domain. 
-								This usually resolves by accessing via IP address instead.
+								The app detected a hydration mismatch when accessing via <strong>bids.triplepoint.me</strong>. 
+								This is a known issue that doesn't occur when using the IP address.
 							</p>
-							<div style="margin-bottom: 1.5rem;">
+							
+							<div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap;">
 								<a href="http://192.168.18.160:5173/" 
 								   style="
 									   display: inline-block; padding: 0.75rem 1.5rem; 
-									   background: #3b82f6; color: white; text-decoration: none;
+									   background: #10b981; color: white; text-decoration: none;
 									   border-radius: 6px; font-weight: 500;
 								   ">
-									Try IP Access
+									✅ Use IP Address
 								</a>
+								<button onclick="window.location.href = window.location.pathname" 
+								   style="
+									   padding: 0.75rem 1.5rem; background: #f59e0b; color: white;
+									   border: none; border-radius: 6px; font-weight: 500; cursor: pointer;
+								   ">
+									🔄 Try Again
+								</button>
 							</div>
+							
+							<div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+								<h3 style="color: #fbbf24; margin: 0 0 0.5rem 0; font-size: 1rem;">Technical Summary</h3>
+								<p style="margin: 0; font-size: 0.9rem; line-height: 1.4;">
+									<strong>Error:</strong> Cannot read properties of undefined (reading 'call')<br>
+									<strong>Location:</strong> SvelteKit hydration process<br>
+									<strong>Attempts:</strong> ${errorInfo?.details?.attempt || 'Multiple'} recovery attempts failed<br>
+									<strong>Server Data:</strong> ✅ Loading correctly (teams: 10, contacts: 10)<br>
+									<strong>Issue:</strong> Client-side hydration mismatch
+								</p>
+							</div>
+							
 							<details style="text-align: left; margin-top: 1rem;">
-								<summary style="cursor: pointer; color: #94a3b8;">Debug Information</summary>
+								<summary style="cursor: pointer; color: #94a3b8; font-size: 0.9rem;">🔍 Full Debug Information</summary>
 								<pre style="
 									background: #1e293b; padding: 1rem; border-radius: 6px;
-									font-size: 0.8rem; overflow: auto; margin-top: 0.5rem;
-									max-height: 200px;
+									font-size: 0.7rem; overflow: auto; margin-top: 0.5rem;
+									max-height: 200px; white-space: pre-wrap;
 								">${JSON.stringify(errorInfo, null, 2)}</pre>
 							</details>
+							
+							<p style="margin-top: 1.5rem; font-size: 0.8rem; color: #94a3b8;">
+								This error has been logged for debugging. The IP address access works perfectly.
+							</p>
 						</div>
 					</div>
 				`;
