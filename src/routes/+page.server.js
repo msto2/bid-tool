@@ -30,24 +30,45 @@ export async function load() {
       };
     }
     
-    // Try to fetch teams from FastAPI backend with timeout
+    // Try to fetch teams from FastAPI backend with retry
     let teams = [];
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const teamsRes = await fetch('http://127.0.0.1:8000/teams', {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      if (teamsRes.ok) {
-        teams = await teamsRes.json();
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        console.log(`Attempting to fetch teams from FastAPI... (attempt ${attempts + 1}/${maxAttempts})`);
+        
+        const teamsRes = await fetch('http://127.0.0.1:8000/teams', {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'SvelteKit-Server'
+          }
+        });
+        
+        if (teamsRes.ok) {
+          teams = await teamsRes.json();
+          console.log('Successfully fetched teams from FastAPI:', teams.length, 'teams');
+          break; // Success, exit retry loop
+        } else {
+          console.log('FastAPI returned non-OK status:', teamsRes.status);
+          throw new Error(`HTTP ${teamsRes.status}`);
+        }
+      } catch (error) {
+        attempts++;
+        console.log(`FastAPI attempt ${attempts} failed:`, error.message);
+        
+        if (attempts < maxAttempts) {
+          console.log('Retrying in 1 second...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          console.log('All FastAPI attempts failed, using fallback team data');
+        }
       }
-    } catch (error) {
-      console.log('FastAPI not available, using fallback team data');
-      console.log('Error details:', error.message);
-      // Provide fallback team data if API is not available
+    }
+    
+    // If no teams were fetched, provide fallback data
+    if (!teams || teams.length === 0) {
       teams = [
         { id: "1", team_name: "Team Alpha", wins: 0, losses: 0, points_for: 0 },
         { id: "2", team_name: "Team Beta", wins: 0, losses: 0, points_for: 0 },

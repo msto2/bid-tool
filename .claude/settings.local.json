@@ -5,7 +5,8 @@
       "Bash(rm:*)",
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

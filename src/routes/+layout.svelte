@@ -2,10 +2,13 @@
   import { navigating } from '$app/stores';
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
+  
+  let mounted = false;
 
   // Global error handler for deployment-related issues
   onMount(() => {
     if (browser) {
+      mounted = true;
       // Simple localStorage cleanup function
       const clearAllLocalStorage = () => {
         try {
@@ -68,18 +71,27 @@
   });
 </script>
 
-{#if $navigating}
+{#if mounted}
+  {#if $navigating}
+    <div class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading...</div>
+      </div>
+    </div>
+  {/if}
+
+  <main>
+    <slot />
+  </main>
+{:else}
   <div class="loading-overlay">
     <div class="loading-spinner">
       <div class="spinner"></div>
-      <div class="loading-text">Loading...</div>
+      <div class="loading-text">Starting application...</div>
     </div>
   </div>
 {/if}
-
-<main>
-  <slot />
-</main>
 
 <style>
   .loading-overlay {
