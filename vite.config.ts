@@ -3,13 +3,14 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	server: {
-		host: true, 
+		host: '0.0.0.0', // Explicitly bind to all interfaces 
 		port: 5173,
 		allowedHosts: ['bids.triplepoint.me', 'localhost', '127.0.0.1'],
 		cors: true,
 		// Add network access configuration
 		hmr: {
-			port: 5174 // Use different port for HMR to avoid conflicts
+			port: 5174, // Use different port for HMR to avoid conflicts
+			host: '0.0.0.0' // Also bind HMR to all interfaces
 		}
 	},
 	preview: {
