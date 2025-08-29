@@ -1,30 +1,25 @@
 import { json } from '@sveltejs/kit';
-import { apiRequest, parseJsonResponse } from '$lib/apiConfig.js';
+
+const EXTERNAL_API_BASE = 'http://localhost:8000';
 
 export async function GET({ url }) {
-    const context = 'playerinfo-api';
     const playerId = url.searchParams.get('playerId');
     
-    console.log(`[${context.toUpperCase()}] Request for player ID: ${playerId}`);
-    
     if (!playerId) {
-        console.warn(`[${context.toUpperCase()}] Missing playerId parameter`);
         return json({ error: 'playerId parameter is required' }, { status: 400 });
     }
     
     try {
-        console.log(`[${context.toUpperCase()}] Fetching player info for ID: ${playerId}`);
-        const response = await apiRequest(`/playerinfo?playerId=${playerId}`, {}, context);
-        const data = await parseJsonResponse(response, context);
+        const response = await fetch(`${EXTERNAL_API_BASE}/playerinfo?playerId=${playerId}`);
         
-        console.log(`[${context.toUpperCase()}] Successfully fetched player info for: ${data?.name || 'unknown'}`);
+        if (!response.ok) {
+            return json({ error: 'Failed to fetch player info' }, { status: response.status });
+        }
+        
+        const data = await response.json();
         return json(data);
-        
     } catch (error) {
-        console.error(`[${context.toUpperCase()}] Error fetching player info:`, error);
-        return json({ 
-            error: 'Failed to fetch player info',
-            details: error.message 
-        }, { status: 500 });
+        console.error('Error fetching player info:', error);
+        return json({ error: 'Failed to fetch player info' }, { status: 500 });
     }
 }
