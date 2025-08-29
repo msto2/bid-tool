@@ -22,6 +22,7 @@
 
   let signedInTeam = null;
   let mounted = false;
+  let dataReady = false;
 
   onMount(() => {
     // Check and clear old deployment data, then get current session
@@ -37,14 +38,46 @@
           
           // Get current signed in team if any
           signedInTeam = getSignedInTeam();
+          
+          // Ensure data is fully loaded and valid before mounting
+          try {
+            if (data) {
+              // Validate teams data
+              const teamsValid = Array.isArray(data.teams) || data.teams === null || data.teams === undefined;
+              
+              // Validate contacts data
+              const contactsValid = data.contacts && 
+                                   typeof data.contacts === 'object' && 
+                                   !Array.isArray(data.contacts);
+              
+              if (teamsValid && contactsValid) {
+                dataReady = true;
+              } else {
+                console.log('Data validation failed:', { teams: data.teams, contacts: data.contacts });
+                // Force data to safe defaults
+                data.teams = data.teams || [];
+                data.contacts = data.contacts || {};
+                dataReady = true;
+              }
+            } else {
+              console.log('No data received, using defaults');
+              dataReady = true;
+            }
+          } catch (dataError) {
+            console.error('Data validation error:', dataError);
+            dataReady = true;
+          }
+          
           mounted = true;
         }, 100);
       } catch (error) {
         console.log('Error in session check:', error);
         signedInTeam = null;
+        dataReady = true;
         mounted = true;
       }
     } else {
+      dataReady = true;
       mounted = true;
     }
   });
@@ -638,6 +671,12 @@
   .loading-spinner {
     text-align: center;
   }
+
+  .loading-detail {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+  }
   
   .spinner {
     width: 40px;
@@ -655,7 +694,7 @@
   }
 </style>
 
-{#if mounted}
+{#if mounted && dataReady}
 <div class="container">
   <div class="header">
     {#if signedInTeam}
@@ -832,7 +871,10 @@
   <div class="loading-state">
     <div class="loading-spinner">
       <div class="spinner"></div>
-      <p>Loading...</p>
+      <p>Loading application...</p>
+      {#if mounted && !dataReady}
+        <p class="loading-detail">Preparing data...</p>
+      {/if}
     </div>
   </div>
 {/if}
