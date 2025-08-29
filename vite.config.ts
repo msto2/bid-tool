@@ -3,9 +3,13 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	server: {
-		host: true, 
+		host: '0.0.0.0', 
 		port: 5173,
-		allowedHosts: ['bids.triplepoint.me']
+		https: true, // Enable HTTPS for external access
+		hmr: {
+			port: 5173,
+			host: 'localhost'
+		}
 	},
 	build: {
 		rollupOptions: {

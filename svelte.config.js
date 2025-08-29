@@ -19,6 +19,10 @@ const config = {
 		serviceWorker: {
 			// Disable service worker to prevent caching issues
 			register: false
+		},
+		paths: {
+			// Ensure assets work with external access
+			relative: false
 		}
 	}
 };
