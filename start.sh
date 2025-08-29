@@ -23,55 +23,65 @@ echo
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
-    echo "ERROR: Python 3 is not installed or not in PATH"
-    echo "Please install Python 3.8+ from https://python.org"
-    exit 1
+echo "ERROR: Python 3 is not installed or not in PATH"
+echo "Please install Python 3.8+ from https://python.org"
+exit 1
 fi
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
-    echo "ERROR: Node.js is not installed or not in PATH"
-    echo "Please install Node.js from https://nodejs.org"
-    exit 1
+echo "ERROR: Node.js is not installed or not in PATH"
+echo "Please install Node.js from https://nodejs.org"
+exit 1
 fi
 
 # Check if npm dependencies are installed
 if [ ! -d "node_modules" ]; then
-    echo "Installing npm dependencies..."
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to install npm dependencies"
-        exit 1
-    fi
+echo "Installing npm dependencies..."
+npm install
+if [ $? -ne 0 ]; then
+echo "ERROR: Failed to install npm dependencies"
+exit 1
+fi
+else
+# Check if authentication dependencies are installed
+if ! npm ls @getbrevo/brevo &> /dev/null; then
+echo "Installing authentication dependencies..."
+npm install
+if [ $? -ne 0 ]; then
+echo "ERROR: Failed to install authentication dependencies"
+exit 1
+fi
+fi
 fi
 
 # Check if Python dependencies are installed for the API
 cd espn-api-0.45.1
 if ! python3 -c "import fastapi" &> /dev/null; then
-    echo "Installing Python dependencies..."
-    pip3 install fastapi uvicorn espn-api requests
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to install Python dependencies"
-        exit 1
-    fi
+echo "Installing Python dependencies..."
+pip3 install fastapi uvicorn espn-api requests
+if [ $? -ne 0 ]; then
+echo "ERROR: Failed to install Python dependencies"
+exit 1
+fi
 fi
 
 # Check if .env file exists
 cd ..
 if [ ! -f ".env" ]; then
-    echo
-    echo "WARNING: .env file not found!"
-    echo "You need to create a .env file with your ESPN credentials and API keys:"
-    echo
-    echo "SWID=your_swid_cookie_value"
-    echo "ESPN_S2=your_espn_s2_cookie_value"
-    echo "BREVO_API_KEY=your_brevo_api_key_here"
-    echo "TEXTBEE_API_KEY=your_textbee_api_key_here"
-    echo "TEXTBEE_DEVICE_ID=your_textbee_device_id_here"
-    echo 'CONTACTS={"1":{"email":"team1@example.com","phone":"1234567890"}}'
-    echo
-    echo "Please check the README.md for instructions on how to get these values."
-    read -p "Press Enter to continue..."
+echo
+echo "WARNING: .env file not found!"
+echo "You need to create a .env file with your ESPN credentials and API keys:"
+echo
+echo "SWID=your_swid_cookie_value"
+echo "ESPN_S2=your_espn_s2_cookie_value"
+echo "BREVO_API_KEY=your_brevo_api_key_here"
+echo "TEXTBEE_API_KEY=your_textbee_api_key_here"
+echo "TEXTBEE_DEVICE_ID=your_textbee_device_id_here"
+echo 'CONTACTS={"1":{"email":"team1@example.com","phone":"1234567890"}}'
+echo
+echo "Please check the README.md for instructions on how to get these values."
+read -p "Press Enter to continue..."
 fi
 
 echo
@@ -90,22 +100,22 @@ RETRY_COUNT=0
 API_READY=false
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -s http://localhost:8000/teams > /dev/null 2>&1; then
-        API_READY=true
-        echo "✓ FastAPI server is running and responding on port 8000"
-        break
-    else
-        RETRY_COUNT=$((RETRY_COUNT + 1))
-        echo "Waiting for FastAPI server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
-        sleep 2
-    fi
+if curl -s http://localhost:8000/teams > /dev/null 2>&1; then
+API_READY=true
+echo "✓ FastAPI server is running and responding on port 8000"
+break
+else
+RETRY_COUNT=$((RETRY_COUNT + 1))
+echo "Waiting for FastAPI server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+sleep 2
+fi
 done
 
 if [ "$API_READY" = false ]; then
-    echo "ERROR: FastAPI server failed to start or is not responding after $MAX_RETRIES attempts"
-    echo "Please check the API server logs above for errors"
-    kill $API_PID 2>/dev/null
-    exit 1
+echo "ERROR: FastAPI server failed to start or is not responding after $MAX_RETRIES attempts"
+echo "Please check the API server logs above for errors"
+kill $API_PID 2>/dev/null
+exit 1
 fi
 
 echo "Starting SvelteKit development server..."
@@ -116,9 +126,9 @@ sleep 2
 
 # Test one more time before starting SvelteKit to ensure API is ready
 if curl -s http://127.0.0.1:8000/teams > /dev/null 2>&1; then
-    echo "✓ API server confirmed ready, starting SvelteKit..."
+echo "✓ API server confirmed ready, starting SvelteKit..."
 else
-    echo "⚠ API server may still be initializing..."
+echo "⚠ API server may still be initializing..."
 fi
 
 npm run dev &
@@ -135,15 +145,14 @@ echo "Press Ctrl+C to stop both servers..."
 
 # Function to cleanup on exit
 cleanup() {
-    echo
-    echo "Stopping servers..."
-    kill $API_PID 2>/dev/null
-    kill $SVELTE_PID 2>/dev/null
-    exit 0
+echo
+echo "Stopping servers..."
+kill $API_PID 2>/dev/null
+kill $SVELTE_PID 2>/dev/null
+exit 0
 }
 
 # Set trap to cleanup on script exit
 trap cleanup SIGINT SIGTERM
 
 # Wait for user input or process termination
-wait
