@@ -1,42 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { broadcastToSSEClients } from '$lib/sse.js';
-import { writeFileSync, readFileSync, existsSync } from 'fs';
-import path from 'path';
-import { isBiddingAllowedServer, getCurrentBidPeriodServer } from '$lib/server/bidWindow.js';
-
-// File path for persistent bid storage
-const BIDS_FILE_PATH = path.join(process.cwd(), 'bids.json');
 
 // In-memory storage for demo purposes
 // In production, this should be replaced with a proper database
 let bidsStorage = [];
-
-// Load bids from file on startup
-function loadBidsFromFile() {
-  try {
-    if (existsSync(BIDS_FILE_PATH)) {
-      const fileContent = readFileSync(BIDS_FILE_PATH, 'utf8');
-      bidsStorage = JSON.parse(fileContent);
-      console.log(`Loaded ${bidsStorage.length} bids from file`);
-    }
-  } catch (error) {
-    console.error('Error loading bids from file:', error);
-    bidsStorage = [];
-  }
-}
-
-// Save bids to file
-function saveBidsToFile() {
-  try {
-    writeFileSync(BIDS_FILE_PATH, JSON.stringify(bidsStorage, null, 2));
-    console.log(`Saved ${bidsStorage.length} bids to file`);
-  } catch (error) {
-    console.error('Error saving bids to file:', error);
-  }
-}
-
-// Initialize bids from file
-loadBidsFromFile();
 
 // Cache for free agents to reduce API calls
 let freeAgentsCache = {
@@ -57,16 +24,16 @@ async function getCurrentFreeAgents() {
   try {
     // Use Promise.allSettled for better error handling
     const responses = await Promise.allSettled([
-      fetch('http://127.0.0.1:8000/free-agents-qb'),
-      fetch('http://127.0.0.1:8000/free-agents-rb'),
-      fetch('http://127.0.0.1:8000/free-agents-wr'),
-      fetch('http://127.0.0.1:8000/free-agents-te'),
-      fetch('http://127.0.0.1:8000/free-agents-dt'),
-      fetch('http://127.0.0.1:8000/free-agents-de'),
-      fetch('http://127.0.0.1:8000/free-agents-lb'),
-      fetch('http://127.0.0.1:8000/free-agents-cb'),
-      fetch('http://127.0.0.1:8000/free-agents-s'),
-      fetch('http://127.0.0.1:8000/free-agents-k')
+      fetch('http://localhost:8000/free-agents-qb'),
+      fetch('http://localhost:8000/free-agents-rb'),
+      fetch('http://localhost:8000/free-agents-wr'),
+      fetch('http://localhost:8000/free-agents-te'),
+      fetch('http://localhost:8000/free-agents-dt'),
+      fetch('http://localhost:8000/free-agents-de'),
+      fetch('http://localhost:8000/free-agents-lb'),
+      fetch('http://localhost:8000/free-agents-cb'),
+      fetch('http://localhost:8000/free-agents-s'),
+      fetch('http://localhost:8000/free-agents-k')
     ]);
     
     const allPlayers = [];
@@ -150,18 +117,6 @@ export async function GET() {
 			return b.timestamp - a.timestamp; // Most recent first for same bidder
 		});
 		
-		// Log bids to console for debugging
-		console.log('Current bids:', {
-			totalBids: sortedBids.length,
-			bids: sortedBids.map(bid => ({
-				id: bid.id,
-				player: bid.playerName,
-				bidder: bid.bidder.name,
-				contract: `${bid.contract.years} years, $${bid.contract.salary}`,
-				timestamp: new Date(bid.timestamp).toLocaleString()
-			}))
-		});
-		
 		return json(sortedBids);
 	} catch (error) {
 		console.error('Error fetching bids:', error);
@@ -172,16 +127,6 @@ export async function GET() {
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request }) {
 	try {
-		// Check if bidding is currently allowed using server-side settings
-		const biddingStatus = isBiddingAllowedServer();
-		if (!biddingStatus.allowed) {
-			return json({ 
-				error: 'Bidding is currently closed', 
-				reason: biddingStatus.reason,
-				nextWindow: biddingStatus.nextWindow
-			}, { status: 403 });
-		}
-		
 		const bid = await request.json();
 		
 		// Validate bid structure
@@ -204,31 +149,14 @@ export async function POST({ request }) {
 		if (!bid.timestamp) {
 			bid.timestamp = Date.now();
 		}
-
-		// Add bid period information
-		bid.periodId = getCurrentBidPeriodServer();
 		
-		// Find and remove any existing bid from same bidder for same player IN THE SAME PERIOD
+		// Find and remove any existing bid from same bidder for same player
 		bidsStorage = bidsStorage.filter(existingBid => 
-			!(existingBid.playerId === bid.playerId && 
-			  existingBid.bidder.teamId === bid.bidder.teamId &&
-			  existingBid.periodId === bid.periodId)
+			!(existingBid.playerId === bid.playerId && existingBid.bidder.teamId === bid.bidder.teamId)
 		);
 		
 		// Add the new bid
 		bidsStorage.push(bid);
-		
-		// Save to file
-		saveBidsToFile();
-		
-		// Log new bid to console
-		console.log('New bid created:', {
-			id: bid.id,
-			player: bid.playerName,
-			bidder: bid.bidder.name,
-			contract: `${bid.contract.years} years, $${bid.contract.salary}`,
-			timestamp: new Date(bid.timestamp).toLocaleString()
-		});
 		
 		// Broadcast bid notification to all connected clients
 		broadcastBidNotification(bid);
@@ -251,9 +179,6 @@ export async function DELETE({ url }) {
 			const clearedCount = bidsStorage.length;
 			bidsStorage = [];
 			
-			// Save to file
-			saveBidsToFile();
-			
 			// Broadcast that all bids were cleared
 			const notification = {
 				type: 'all_bids_cleared',
@@ -275,25 +200,10 @@ export async function DELETE({ url }) {
 		}
 		
 		const initialLength = bidsStorage.length;
-		const deletedBid = bidsStorage.find(bid => bid.id === bidId);
 		bidsStorage = bidsStorage.filter(bid => bid.id !== bidId);
 		
 		if (bidsStorage.length === initialLength) {
 			return json({ error: 'Bid not found' }, { status: 404 });
-		}
-		
-		// Save to file
-		saveBidsToFile();
-		
-		// Log bid deletion to console
-		if (deletedBid) {
-			console.log('Bid deleted:', {
-				id: deletedBid.id,
-				player: deletedBid.playerName,
-				bidder: deletedBid.bidder.name,
-				contract: `${deletedBid.contract.years} years, $${deletedBid.contract.salary}`,
-				timestamp: new Date(deletedBid.timestamp).toLocaleString()
-			});
 		}
 		
 		// Broadcast bid deletion notification to all connected clients
