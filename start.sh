@@ -3,6 +3,21 @@
 echo "Starting Fantasy Football Bid Tool..."
 echo
 
+# Kill any existing processes and clean cache
+echo "Cleaning up any existing processes..."
+pkill -f "uvicorn api:app" 2>/dev/null || true
+pkill -f "npm run dev" 2>/dev/null || true
+pkill -f "vite" 2>/dev/null || true
+
+# Clean caches
+echo "Cleaning caches..."
+rm -rf .svelte-kit 2>/dev/null || true
+rm -rf node_modules/.vite 2>/dev/null || true
+npm cache clean --force 2>/dev/null || true
+
+echo "Cleanup complete."
+echo
+
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
     echo "ERROR: Python 3 is not installed or not in PATH"
@@ -72,8 +87,33 @@ cd espn-api-0.45.1
 python3 -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload &
 API_PID=$!
 
-# Wait a moment for the API server to start
+# Wait and check if API server is running
+echo "Waiting for API server to start..."
 sleep 3
+
+# Check if FastAPI server is responding
+MAX_RETRIES=10
+RETRY_COUNT=0
+API_READY=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s http://localhost:8000/teams > /dev/null 2>&1; then
+        API_READY=true
+        echo "✓ FastAPI server is running and responding on port 8000"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        echo "Waiting for FastAPI server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+        sleep 2
+    fi
+done
+
+if [ "$API_READY" = false ]; then
+    echo "ERROR: FastAPI server failed to start or is not responding after $MAX_RETRIES attempts"
+    echo "Please check the API server logs above for errors"
+    kill $API_PID 2>/dev/null
+    exit 1
+fi
 
 echo "Starting SvelteKit development server..."
 cd ..
@@ -81,9 +121,11 @@ npm run dev &
 SVELTE_PID=$!
 
 echo
-echo "Both servers are running..."
+echo "✓ Both servers are running successfully!"
 echo "- ESPN API Server: http://localhost:8000"
 echo "- SvelteKit App: http://localhost:5173"
+echo
+echo "API Health Check: curl http://localhost:8000/teams"
 echo
 echo "Press Ctrl+C to stop both servers..."
 
