@@ -824,14 +824,6 @@
   </div>
 {/if}
 
-  {#if signedInTeam}
-    <div class="footer">
-      <button class="sign-out-btn" on:click={handleSignOut}>
-        Sign Out
-      </button>
-    </div>
-  {/if}
-</div>
 {:else}
   <div class="loading-state">
     <div class="loading-spinner">
