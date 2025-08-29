@@ -1,6 +1,7 @@
 /**
  * Manager authentication utilities
  */
+import { devConfig } from './devMode.js';
 
 const MANAGER_EMAIL = 'michael.stokes.212@gmail.com';
 const MANAGER_SESSION_KEY = 'managerSession';
@@ -11,7 +12,7 @@ const MANAGER_SESSION_KEY = 'managerSession';
  * @returns {boolean} True if user is authorized manager
  */
 export function isAuthorizedManager(email) {
-  return email === MANAGER_EMAIL;
+  return devConfig.allowAnyManagerEmail || email === MANAGER_EMAIL;
 }
 
 /**
