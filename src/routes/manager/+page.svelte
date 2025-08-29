@@ -4,7 +4,6 @@
   import { browser } from '$app/environment';
   import { isManagerAuthenticated, setManagerSession, clearManagerSession } from '$lib/managerAuth.js';
   import { getBidWindowSettings, updateBidWindowSettings, loadBidWindowSettings } from '$lib/bidWindow.js';
-import { devConfig } from '$lib/devMode.js';
   import BidWindowStatus from '$lib/components/BidWindowStatus.svelte';
   import { getSignedInTeam } from '$lib/simple-auth-reset.js';
 
@@ -97,7 +96,7 @@ import { devConfig } from '$lib/devMode.js';
       return;
     }
     
-    if (!devConfig.allowAnyManagerEmail && email !== data.managerEmail) {
+    if (email !== data.managerEmail) {
       error = 'Access denied: Manager privileges required';
       return;
     }
@@ -141,7 +140,7 @@ import { devConfig } from '$lib/devMode.js';
     try {
       // In a real implementation, you'd verify the code server-side
       // For now, we'll accept any 6-digit code for the manager email
-      if (verificationCode.length >= 4 && (devConfig.allowAnyManagerEmail || email === data.managerEmail)) {
+      if (verificationCode.length >= 4 && email === data.managerEmail) {
         if (setManagerSession(email)) {
           authenticated = true;
           loadCurrentSettings();

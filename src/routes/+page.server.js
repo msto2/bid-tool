@@ -3,6 +3,7 @@ import { CONTACTS } from '$env/static/private';
 /** @type {import('./$types.d.ts').PageServerLoad} */
 export async function load() {
   try {
+<<<<<<< HEAD
     // Parse contacts from environment variable first
     let contacts = {};
     try {
@@ -76,6 +77,19 @@ export async function load() {
         { id: "4", team_name: "Team Delta", wins: 0, losses: 0, points_for: 0 }
       ];
     }
+=======
+    // Fetch teams from FastAPI backend
+    const teamsRes = await fetch('http://localhost:8000/teams');
+    
+    if (!teamsRes.ok) {
+      throw new Error('Failed to fetch teams data');
+    }
+    
+    const teams = await teamsRes.json();
+    
+    // Parse contacts from environment variable
+    const contacts = JSON.parse(CONTACTS);
+>>>>>>> parent of 8f3edf1 (connect to web)
     
     // Ensure data structure is always consistent
     return {
@@ -83,7 +97,7 @@ export async function load() {
       contacts: contacts && typeof contacts === 'object' ? contacts : {}
     };
   } catch (error) {
-    console.error('Error in page load function:', error);
+    console.error('Error fetching teams:', error);
     return {
       teams: [],
       contacts: {}
