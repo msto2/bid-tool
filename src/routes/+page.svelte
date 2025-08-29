@@ -4,7 +4,6 @@
   import { browser } from '$app/environment';
   import { contacts as contactsData } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
-  import { checkCacheVersion } from '$lib/version.js';
   
   // Client-side only approach to avoid hydration issues
   export let data = null;
@@ -80,9 +79,6 @@
     // Initialize authentication
     try {
       console.log('[PAGE] Setting up authentication...');
-      
-      // Check cache version first - clears everything if version changed
-      checkCacheVersion();
       
       // Clear old deployment data
       checkAndClearOldAuth();
