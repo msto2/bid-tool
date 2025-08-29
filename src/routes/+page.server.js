@@ -1,29 +1,70 @@
 import { CONTACTS } from '$env/static/private';
+import { apiRequest, parseJsonResponse } from '$lib/apiConfig.js';
 
 /** @type {import('./$types.d.ts').PageServerLoad} */
-export async function load() {
+export async function load({ url }) {
+  const context = 'home-page-load';
+  console.log(`[${context.toUpperCase()}] Starting load function`);
+  console.log(`[${context.toUpperCase()}] Request URL: ${url.href}`);
+  console.log(`[${context.toUpperCase()}] Host: ${url.host}`);
+  console.log(`[${context.toUpperCase()}] Protocol: ${url.protocol}`);
+  
+  let teams = [];
+  let contacts = {};
+  
   try {
-    // Fetch teams from FastAPI backend
-    const teamsRes = await fetch('http://localhost:8000/teams');
+    console.log(`[${context.toUpperCase()}] Fetching teams data...`);
+    const teamsRes = await apiRequest('/teams', {}, 'teams-fetch');
+    teams = await parseJsonResponse(teamsRes, 'teams-parse');
     
-    if (!teamsRes.ok) {
-      throw new Error('Failed to fetch teams data');
+    if (!Array.isArray(teams)) {
+      console.warn(`[${context.toUpperCase()}] Teams data is not an array:`, typeof teams);
+      teams = [];
     }
     
-    const teams = await teamsRes.json();
+    console.log(`[${context.toUpperCase()}] Successfully loaded ${teams.length} teams`);
     
-    // Parse contacts from environment variable
-    const contacts = JSON.parse(CONTACTS);
-    
-    return {
-      teams,
-      contacts
-    };
   } catch (error) {
-    console.error('Error fetching teams:', error);
-    return {
-      teams: [],
-      contacts: {}
-    };
+    console.error(`[${context.toUpperCase()}] Failed to fetch teams:`, error);
+    console.error(`[${context.toUpperCase()}] Error stack:`, error.stack);
+    teams = [];
   }
+
+  try {
+    console.log(`[${context.toUpperCase()}] Parsing contacts from environment...`);
+    console.log(`[${context.toUpperCase()}] CONTACTS env var length:`, CONTACTS?.length || 'undefined');
+    
+    if (CONTACTS) {
+      contacts = JSON.parse(CONTACTS);
+      console.log(`[${context.toUpperCase()}] Parsed contacts for ${Object.keys(contacts).length} teams`);
+    } else {
+      console.warn(`[${context.toUpperCase()}] CONTACTS environment variable is not set`);
+    }
+    
+  } catch (error) {
+    console.error(`[${context.toUpperCase()}] Failed to parse contacts:`, error);
+    console.error(`[${context.toUpperCase()}] CONTACTS raw value:`, CONTACTS);
+    contacts = {};
+  }
+
+  const result = {
+    teams,
+    contacts,
+    loadContext: {
+      timestamp: new Date().toISOString(),
+      host: url.host,
+      protocol: url.protocol,
+      teamsCount: teams.length,
+      contactsCount: Object.keys(contacts).length,
+      success: true
+    }
+  };
+
+  console.log(`[${context.toUpperCase()}] Load function complete:`, {
+    teamsCount: result.teams.length,
+    contactsCount: result.contactsCount,
+    host: result.loadContext.host
+  });
+
+  return result;
 }
