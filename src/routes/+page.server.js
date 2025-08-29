@@ -1,7 +1,6 @@
 /** @type {import('./$types.d.ts').PageServerLoad} */
 export async function load() {
   try {
-<<<<<<< HEAD
     // Parse contacts from environment variable first
     let contacts = {};
     try {
@@ -75,7 +74,6 @@ export async function load() {
         { id: "4", team_name: "Team Delta", wins: 0, losses: 0, points_for: 0 }
       ];
     }
-=======
     // Fetch teams from FastAPI backend
     const teamsRes = await fetch('http://localhost:8000/teams');
     
