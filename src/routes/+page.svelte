@@ -3,12 +3,13 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
+  import { checkCacheVersion } from '$lib/version.js';
 
   export let data;
   
-  // Safely destructure data with fallbacks
-  $: teams = data?.teams || [];
-  $: contacts = data?.contacts || {};
+  // Safely destructure data with strict type checking for hydration consistency
+  $: teams = Array.isArray(data?.teams) ? data.teams : [];
+  $: contacts = (data?.contacts && typeof data.contacts === 'object' && !Array.isArray(data.contacts)) ? data.contacts : {};
 
   let showSignInModal = false;
   let selectedTeam = null;
@@ -28,7 +29,10 @@
       try {
         // Add small delay to ensure proper hydration
         setTimeout(() => {
-          // Clear old deployment data first
+          // Check cache version first - clears everything if version changed
+          checkCacheVersion();
+          
+          // Clear old deployment data
           checkAndClearOldAuth();
           
           // Get current signed in team if any

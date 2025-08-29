@@ -6,6 +6,7 @@
   import { getBidWindowSettings, updateBidWindowSettings, loadBidWindowSettings } from '$lib/bidWindow.js';
 import { devConfig } from '$lib/devMode.js';
   import BidWindowStatus from '$lib/components/BidWindowStatus.svelte';
+  import { getSignedInTeam } from '$lib/simple-auth-reset.js';
 
   export let data;
   
@@ -37,6 +38,28 @@ import { devConfig } from '$lib/devMode.js';
     if (browser) {
       // Check if manager is already authenticated
       authenticated = isManagerAuthenticated();
+      
+      // If not authenticated, check if the signed-in user is the manager
+      if (!authenticated) {
+        const signedInUser = getSignedInTeam();
+        if (signedInUser) {
+          // Check if the signed-in user's team has the manager email in contacts
+          const managerEmail = 'michael.stokes.212@gmail.com';
+          
+          // For now, we'll check if the team ID corresponds to the manager
+          // You may need to adjust this logic based on how you determine which team belongs to the manager
+          if (data?.contacts && data.contacts[signedInUser.id]?.email === managerEmail) {
+            // Auto-authenticate the manager
+            if (setManagerSession(managerEmail)) {
+              authenticated = true;
+              email = managerEmail;
+              success = 'Automatically authenticated as manager';
+              setTimeout(() => { success = ''; }, 3000);
+            }
+          }
+        }
+      }
+      
       if (authenticated) {
         loadCurrentSettings();
       }

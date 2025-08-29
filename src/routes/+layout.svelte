@@ -22,24 +22,46 @@
       // Add global error handler for unhandled promise rejections
       window.addEventListener('unhandledrejection', (event) => {
         console.error('Unhandled promise rejection:', event.reason);
-        if (event.reason?.message?.includes('Cannot read properties of undefined')) {
-          console.log('Detected potential deployment session issue, clearing data...');
+        if (event.reason?.message?.includes('Cannot read properties of undefined') ||
+            event.reason?.message?.includes('reading \'call\'') ||
+            event.reason?.message?.includes('hydration')) {
+          console.log('Detected potential deployment/cache issue, clearing data...');
           clearAllLocalStorage();
           // Prevent the error from bubbling up
           event.preventDefault();
-          // Reload the page after a brief delay
-          setTimeout(() => window.location.reload(), 500);
+          // Force reload with cache clearing
+          setTimeout(() => {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister();
+                }
+              });
+            }
+            window.location.reload(true);
+          }, 500);
         }
       });
 
       // Add global error handler for other errors
       window.addEventListener('error', (event) => {
         console.error('Global error:', event.error);
-        if (event.error?.message?.includes('Cannot read properties of undefined')) {
-          console.log('Detected potential deployment session issue, clearing data...');
+        if (event.error?.message?.includes('Cannot read properties of undefined') ||
+            event.error?.message?.includes('reading \'call\'') ||
+            event.error?.message?.includes('hydration')) {
+          console.log('Detected potential deployment/cache issue, clearing data...');
           clearAllLocalStorage();
-          // Reload the page after a brief delay
-          setTimeout(() => window.location.reload(), 500);
+          // Force reload with cache clearing
+          setTimeout(() => {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister();
+                }
+              });
+            }
+            window.location.reload(true);
+          }, 500);
         }
       });
     }
