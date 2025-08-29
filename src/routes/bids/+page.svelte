@@ -2,12 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { contacts } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam } from '$lib/simple-auth-reset.js';
-  import BidWindowStatus from '$lib/components/BidWindowStatus.svelte';
 
   export let data;
-  const { teams } = data;
+  const { teams, contacts } = data;
   let { bids } = data;
 
   let signedInTeam = null;
@@ -31,7 +29,6 @@
         
         createTeamsMap();
         setupRealTimeUpdates();
-        fetchBidWindowStatus();
       } catch (error) {
         console.log('Error in session check:', error);
         goto('/');
@@ -74,9 +71,6 @@
           sortedBids = [];
           revealedIndexes.clear();
           revealBids = false;
-        } else if (data.type === 'bid_window_settings_updated') {
-          // Refetch bid window status when settings change
-          fetchBidWindowStatus();
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
@@ -173,28 +167,32 @@
     return signedInTeam.id === bid.bidder.teamId;
   };
 
-  // Get bid window status from server
-  let bidWindowStatus = { allowed: true };
-  
-  async function fetchBidWindowStatus() {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      const response = await fetch('/api/bid-window');
-      if (response.ok) {
-        bidWindowStatus = await response.json();
-      }
-    } catch (error) {
-      console.error('Error fetching bid window status:', error);
-    }
-  }
-  
   function isInRevealWindow() {
-    // Only run on client-side
-    if (typeof window === 'undefined') return false;
+    const now = new Date();
     
-    // Reveal bids when bidding window is closed (bids should be hidden when bidding is open)
-    return !bidWindowStatus.allowed;
+    // Create dates in Eastern Time
+    function getEasternTime(date) {
+      return new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    }
+    
+    const easternNow = getEasternTime(now);
+    const currentDay = easternNow.getDay(); // Sunday = 0, Monday = 1, ..., Saturday = 6
+    const currentHour = easternNow.getHours();
+    
+    // Calculate which day of the week we are in the Wed 9pm -> Sun 9pm cycle
+    if (currentDay === 3) { // Wednesday
+      // On Wednesday: reveal if it's 9 PM or later
+      return currentHour >= 21;
+    } else if (currentDay === 4 || currentDay === 5 || currentDay === 6) { // Thursday, Friday, Saturday
+      // Thursday through Saturday: always in reveal window
+      return true;
+    } else if (currentDay === 0) { // Sunday
+      // On Sunday: reveal only if it's before 9 PM
+      return currentHour < 21;
+    } else { // Monday (1) or Tuesday (2)
+      // Monday and Tuesday: never in reveal window
+      return false;
+    }
   }
 
   let revealBids = false;
@@ -205,8 +203,12 @@
   // Initialize reveal state
   $: {
     const shouldReveal = isInRevealWindow();
+    const shouldClearBids = isClearBidsTime();
     
-    if (shouldReveal && !revealBids) {
+    if (shouldClearBids) {
+      // Clear all bids at Sunday 9 PM
+      clearAllBids();
+    } else if (shouldReveal && !revealBids) {
       // Just entered reveal window - trigger animation
       triggerRevealAnimation();
     } else if (!shouldReveal && revealBids) {
@@ -224,32 +226,60 @@
     }
   }
   
+  function isClearBidsTime() {
+    const now = new Date();
+    const easternNow = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const currentDay = easternNow.getDay();
+    const currentHour = easternNow.getHours();
+    
+    // Clear bids at Sunday 9 PM exactly
+    return currentDay === 0 && currentHour === 21;
+  }
+  
+  async function clearAllBids() {
+    try {
+      // Call API to clear all bids
+      const response = await fetch('/api/bids?clear=all', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        bids = [];
+        sortedBids = [];
+        revealedIndexes.clear();
+        revealBids = false;
+        console.log('All bids cleared for new week');
+      } else {
+        console.error('Failed to clear bids:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error clearing bids:', error);
+    }
+  }
   
   function updateSortedBids() {
-    if (!revealBids || !bids || !Array.isArray(bids)) {
-      sortedBids = [];
-      return;
-    }
+    if (!revealBids) return;
     
-    // Group bids by player name
-    const playerGroups = {};
+    // Group bids by player name and sort by total salary within each group
+    const grouped = {};
     bids.forEach(bid => {
       const totalSalary = bid.contract.salary * bid.contract.years;
-      
-      if (!playerGroups[bid.playerName]) {
-        playerGroups[bid.playerName] = [];
+      if (!grouped[bid.playerName]) {
+        grouped[bid.playerName] = [];
       }
-      
-      playerGroups[bid.playerName].push({ ...bid, totalSalary });
+      grouped[bid.playerName].push({ ...bid, totalSalary });
     });
     
-    // Sort each player group by total salary (highest first)
-    Object.keys(playerGroups).forEach(playerName => {
-      playerGroups[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
+    // Sort each group by total salary (highest first)
+    Object.keys(grouped).forEach(playerName => {
+      grouped[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
     });
     
     // Flatten back to array, maintaining player groupings
-    sortedBids = Object.values(playerGroups).flat();
+    sortedBids = Object.values(grouped).flat();
   }
   
   function triggerRevealAnimation() {
@@ -266,7 +296,7 @@
     });
   }
   
-  // Update sorted bids when bids change
+  // Update sorted bids when regular bids change
   $: if (bids && revealBids) {
     updateSortedBids();
   }
@@ -293,10 +323,6 @@
   .header {
     margin-bottom: 2rem;
     position: relative;
-  }
-
-  .bid-window-section {
-    margin-bottom: 1.5rem;
   }
 
   .header-content {
@@ -331,6 +357,11 @@
     font-size: 0.8rem;
   }
 
+  .team-name {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
 
   .nav-btn {
     background: rgba(59, 130, 246, 0.1);
@@ -390,32 +421,6 @@
   .bid-count {
     color: #94a3b8;
     font-size: 0.9rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .history-link {
-    color: #60a5fa;
-    text-decoration: none;
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    border: 1px solid rgba(96, 165, 250, 0.3);
-    background: rgba(96, 165, 250, 0.1);
-    transition: all 0.2s ease;
-  }
-
-  .history-link:hover {
-    background: rgba(96, 165, 250, 0.2);
-    border-color: rgba(96, 165, 250, 0.5);
-  }
-
-  .period-info {
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: normal;
   }
 
   .bids-grid {
@@ -739,10 +744,6 @@
       <h1 class="main-title">Submitted Bids</h1>
       <p class="subtitle">Track all player bids across the league</p>
     </div>
-  </div>
-
-  <div class="bid-window-section">
-    <BidWindowStatus compact={true} />
   </div>
 
   <div class="actions-bar">

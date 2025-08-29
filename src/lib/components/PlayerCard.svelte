@@ -1,7 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
-  import { isBiddingAllowed } from '$lib/bidWindow.js';
-  
   export let player;
   export let onBid;
   export let loadingHistoricalStats = {};
@@ -11,19 +8,6 @@
   let years = 1;
   let salary = 1;
   let errorMessage = '';
-  let biddingStatus = { allowed: true, reason: '' };
-  
-  // Check bidding status on mount and periodically
-  onMount(() => {
-    biddingStatus = isBiddingAllowed();
-    
-    // Update bidding status every minute
-    const interval = setInterval(() => {
-      biddingStatus = isBiddingAllowed();
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  });
 
   const statLabelsPassing = {
     passingCompletions: "Completions",
@@ -173,13 +157,6 @@
   }
 
   function openBidModal() {
-    // Check if bidding is allowed before opening modal
-    biddingStatus = isBiddingAllowed();
-    if (!biddingStatus.allowed) {
-      errorMessage = biddingStatus.reason;
-      return;
-    }
-    
     showBidModal = true;
     years = 1;
     salary = 1;
@@ -195,13 +172,6 @@
 
   async function submitBid() {
     if (!onBid) return;
-    
-    // Double-check bidding status before submitting
-    const currentBiddingStatus = isBiddingAllowed();
-    if (!currentBiddingStatus.allowed) {
-      errorMessage = currentBiddingStatus.reason;
-      return;
-    }
     
     try {
       await onBid(player, { years, salary });
@@ -313,19 +283,6 @@
     transform: scale(1.1);
     box-shadow: 0 5px 20px rgba(16, 185, 129, 0.5);
     background: linear-gradient(135deg, #059669, #047857);
-  }
-
-  .add-btn.disabled {
-    background: linear-gradient(135deg, #6b7280, #4b5563);
-    box-shadow: 0 3px 12px rgba(107, 114, 128, 0.3);
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  .add-btn.disabled:hover {
-    transform: none;
-    box-shadow: 0 3px 12px rgba(107, 114, 128, 0.3);
-    background: linear-gradient(135deg, #6b7280, #4b5563);
   }
 
   .player-stats {
@@ -442,6 +399,15 @@
     text-align: center;
   }
 
+  .breakdown-category-title {
+    margin: 0.5rem 0 0.3rem;
+    font-weight: 600;
+    color: #10b981;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    text-align: center;
+  }
 
   .modal-overlay {
     position: fixed;
@@ -720,18 +686,7 @@
         <div class="player-name">{player.name}</div>
         <div class="player-team">{player.position} • {player.team}</div>
       </div>
-      <button 
-        class="add-btn" 
-        class:disabled={!biddingStatus.allowed}
-        on:click={openBidModal}
-        title={!biddingStatus.allowed ? biddingStatus.reason : 'Place bid for this player'}
-      >
-        {#if biddingStatus.allowed}
-          +
-        {:else}
-          🔒
-        {/if}
-      </button>
+      <button class="add-btn" on:click={openBidModal}>+</button>
     </div>
 
     <div class="player-stats">
