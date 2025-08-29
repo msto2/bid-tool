@@ -5,9 +5,23 @@
   import { contacts } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
   import { checkCacheVersion } from '$lib/version.js';
+  import { debugHydrationMismatch, setupHydrationErrorMonitoring } from '$lib/hydrationDebug.js';
+  import { createSafeDataWrapper, setupComponentErrorRecovery } from '$lib/robustMount.js';
 
   export let data;
-  const { teams } = data;
+  
+  // Debug data structure before using it
+  console.log('[PAGE DEBUG] Received data:', {
+    dataType: typeof data,
+    dataKeys: data ? Object.keys(data) : 'undefined',
+    teams: data?.teams ? { type: typeof data.teams, length: Array.isArray(data.teams) ? data.teams.length : 'not array' } : 'undefined',
+    contacts: data?.contacts ? typeof data.contacts : 'undefined',
+    loadContext: data?.loadContext
+  });
+  
+  // Create safe wrapper to prevent undefined access errors
+  const safeData = createSafeDataWrapper(data);
+  const teams = safeData.teams;
 
   let showSignInModal = false;
   let selectedTeam = null;
@@ -22,11 +36,22 @@
   let mounted = false;
 
   onMount(() => {
+    console.log('[PAGE DEBUG] onMount starting...');
+    
+    // Setup hydration debugging and error recovery FIRST
+    if (browser) {
+      setupHydrationErrorMonitoring();
+      setupComponentErrorRecovery();
+      debugHydrationMismatch('home-page', data);
+    }
+    
     mounted = true;
     
     // Check and clear old deployment data, then get current session
     if (browser) {
       try {
+        console.log('[PAGE DEBUG] Running auth checks...');
+        
         // Check cache version first - clears everything if version changed
         checkCacheVersion();
         
@@ -35,11 +60,15 @@
         
         // Get current signed in team if any
         signedInTeam = getSignedInTeam();
+        
+        console.log('[PAGE DEBUG] Auth check complete, signedInTeam:', signedInTeam);
       } catch (error) {
-        console.log('Error in session check:', error);
+        console.error('[PAGE DEBUG] Error in session check:', error);
         signedInTeam = null;
       }
     }
+    
+    console.log('[PAGE DEBUG] onMount complete');
   });
 
   function handleTeamClick(team) {

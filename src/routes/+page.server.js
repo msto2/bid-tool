@@ -62,7 +62,7 @@ export async function load({ url }) {
 
   console.log(`[${context.toUpperCase()}] Load function complete:`, {
     teamsCount: result.teams.length,
-    contactsCount: result.contactsCount,
+    contactsCount: Object.keys(result.contacts).length,
     host: result.loadContext.host
   });
 
