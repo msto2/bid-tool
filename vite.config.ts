@@ -5,11 +5,7 @@ export default defineConfig({
 	server: {
 		host: true, 
 		port: 5173,
-		allowedHosts: ['bids.triplepoint.me'],
-		hmr: {
-			port: 5173,
-			host: 'localhost'
-		}
+		allowedHosts: ['bids.triplepoint.me']
 	},
 	build: {
 		rollupOptions: {
