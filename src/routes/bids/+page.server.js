@@ -10,10 +10,26 @@ export async function load({ fetch, setHeaders }) {
     // Parse contacts from environment variable first
     let contacts = {};
     try {
-      contacts = JSON.parse(CONTACTS || '{}');
+      if (CONTACTS) {
+        contacts = JSON.parse(CONTACTS);
+      } else {
+        // Provide fallback contacts structure that matches team IDs
+        contacts = {
+          "1": { email: "team1@example.com", phone: "555-0001" },
+          "2": { email: "team2@example.com", phone: "555-0002" },
+          "3": { email: "team3@example.com", phone: "555-0003" },
+          "4": { email: "team4@example.com", phone: "555-0004" }
+        };
+      }
     } catch (parseError) {
       console.error('Error parsing CONTACTS:', parseError);
-      contacts = {};
+      // Provide fallback contacts structure
+      contacts = {
+        "1": { email: "team1@example.com", phone: "555-0001" },
+        "2": { email: "team2@example.com", phone: "555-0002" },
+        "3": { email: "team3@example.com", phone: "555-0003" },
+        "4": { email: "team4@example.com", phone: "555-0004" }
+      };
     }
     
     // Always fetch bids (internal API)

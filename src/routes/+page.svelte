@@ -5,7 +5,10 @@
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
 
   export let data;
-  const { teams, contacts } = data;
+  
+  // Safely destructure data with fallbacks
+  $: teams = data?.teams || [];
+  $: contacts = data?.contacts || {};
 
   let showSignInModal = false;
   let selectedTeam = null;
@@ -17,20 +20,28 @@
   let errorMessage = '';
 
   let signedInTeam = null;
+  let mounted = false;
 
   onMount(() => {
     // Check and clear old deployment data, then get current session
     if (browser) {
       try {
-        // Clear old deployment data first
-        checkAndClearOldAuth();
-        
-        // Get current signed in team if any
-        signedInTeam = getSignedInTeam();
+        // Add small delay to ensure proper hydration
+        setTimeout(() => {
+          // Clear old deployment data first
+          checkAndClearOldAuth();
+          
+          // Get current signed in team if any
+          signedInTeam = getSignedInTeam();
+          mounted = true;
+        }, 100);
       } catch (error) {
         console.log('Error in session check:', error);
         signedInTeam = null;
+        mounted = true;
       }
+    } else {
+      mounted = true;
     }
   });
 
@@ -53,7 +64,7 @@
   }
 
   async function sendVerificationCode() {
-    if (!selectedTeam || !contacts[selectedTeam.id]) {
+    if (!selectedTeam || !contacts || !contacts[selectedTeam.id]) {
       errorMessage = 'Team contact information not found';
       return;
     }
@@ -611,8 +622,36 @@
       grid-template-columns: 1fr;
     }
   }
+  
+  .loading-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+  
+  .loading-spinner {
+    text-align: center;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(59, 130, 246, 0.3);
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
 
+{#if mounted}
 <div class="container">
   <div class="header">
     {#if signedInTeam}
@@ -699,16 +738,16 @@
           </div>
         </div>
 
-        {#if contacts[selectedTeam.id]}
+        {#if contacts && selectedTeam && contacts[selectedTeam.id]}
           <div class="form-group">
             <div class="form-label">
               Code will be sent to:
             </div>
             <div style="color: #06b6d4; font-weight: 500;">
               {#if authMethod === 'email'}
-                {contacts[selectedTeam.id].email}
+                {contacts[selectedTeam.id]?.email || 'Email not available'}
               {:else}
-                {contacts[selectedTeam.id].phone}
+                {contacts[selectedTeam.id]?.phone || 'Phone not available'}
               {/if}
             </div>
           </div>
@@ -781,6 +820,23 @@
       {#if errorMessage}
         <div class="error-message">{errorMessage}</div>
       {/if}
+    </div>
+  </div>
+{/if}
+
+  {#if signedInTeam}
+    <div class="footer">
+      <button class="sign-out-btn" on:click={handleSignOut}>
+        Sign Out
+      </button>
+    </div>
+  {/if}
+</div>
+{:else}
+  <div class="loading-state">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading...</p>
     </div>
   </div>
 {/if}
