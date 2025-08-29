@@ -7,6 +7,7 @@ export default defineConfig({
 		port: 5173,
 		allowedHosts: ['bids.triplepoint.me']
 	},
+	base: './',
 	// build: {
 	// 	rollupOptions: {
 	// 		output: {
