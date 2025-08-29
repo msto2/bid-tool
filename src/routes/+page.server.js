@@ -1,84 +1,19 @@
 import { CONTACTS } from '$env/static/private';
-import { API_ENDPOINTS } from '$lib/config.js';
 
 /** @type {import('./$types.d.ts').PageServerLoad} */
-export async function load({ fetch }) {
+export async function load() {
   try {
-  // Parse contacts from environment variable first
-  let contacts = {};
-  try {
-    if (CONTACTS) {
-      contacts = JSON.parse(CONTACTS);
-      console.log('Parsed contacts successfully');
-    } else {
-      console.log('CONTACTS environment variable not set');
-      // Provide fallback contacts structure that matches team IDs
-      contacts = {
-        "1": { email: "team1@example.com", phone: "555-0001" },
-        "2": { email: "team2@example.com", phone: "555-0002" },
-        "3": { email: "team3@example.com", phone: "555-0003" },
-        "4": { email: "team4@example.com", phone: "555-0004" }
-      };
-    }
-  } catch (parseError) {
-    console.error('Error parsing CONTACTS:', parseError);
-    // Provide fallback contacts structure
-    contacts = {
-      "1": { email: "team1@example.com", phone: "555-0001" },
-      "2": { email: "team2@example.com", phone: "555-0002" },
-      "3": { email: "team3@example.com", phone: "555-0003" },
-      "4": { email: "team4@example.com", phone: "555-0004" }
-    };
-  }
-  
-  // Try to fetch teams from FastAPI backend with retry
-  let teams = [];
-  let attempts = 0;
-  const maxAttempts = 2; // Reduced attempts to prevent long delays
-  
-  while (attempts < maxAttempts) {
-    try {
-      console.log(`Attempting to fetch teams from FastAPI... (attempt ${attempts + 1}/${maxAttempts})`);
-      
-      const teamsRes = await fetch(API_ENDPOINTS.teams(), {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'SvelteKit-Server'
-        },
-        // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
-      
-      if (teamsRes.ok) {
-        teams = await teamsRes.json();
-        console.log('Successfully fetched teams from FastAPI:', teams.length, 'teams');
-        break; // Success, exit retry loop
-      } else {
-        console.log('FastAPI returned non-OK status:', teamsRes.status);
-        throw new Error(`HTTP ${teamsRes.status}`);
-      }
-    } catch (error) {
-      attempts++;
-      console.log(`FastAPI attempt ${attempts} failed:`, error.message);
-      
-      if (attempts < maxAttempts) {
-        console.log('Retrying in 0.5 second...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } else {
-        console.log('All FastAPI attempts failed, using fallback team data');
-      }
-    }
-  }
+    // Fetch teams from FastAPI backend
+    const teamsRes = await fetch('http://localhost:8000/teams');
     
-    // If no teams were fetched, provide fallback data
-    if (!teams || teams.length === 0) {
-      teams = [
-        { id: "1", team_name: "Team Alpha", wins: 0, losses: 0, points_for: 0 },
-        { id: "2", team_name: "Team Beta", wins: 0, losses: 0, points_for: 0 },
-        { id: "3", team_name: "Team Gamma", wins: 0, losses: 0, points_for: 0 },
-        { id: "4", team_name: "Team Delta", wins: 0, losses: 0, points_for: 0 }
-      ];
+    if (!teamsRes.ok) {
+      throw new Error('Failed to fetch teams data');
     }
+    
+    const teams = await teamsRes.json();
+    
+    // Parse contacts from environment variable
+    const contacts = JSON.parse(CONTACTS);
     
     return {
       teams,
