@@ -2,20 +2,26 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { contacts as contactsData } from '$lib/data/contacts.js';
+  import { contacts } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
   import { checkCacheVersion } from '$lib/version.js';
+  import { debugHydrationMismatch, setupHydrationErrorMonitoring } from '$lib/hydrationDebug.js';
+  import { createSafeDataWrapper, setupComponentErrorRecovery } from '$lib/robustMount.js';
+
+  export let data;
   
-  // Client-side only approach to avoid hydration issues
-  export let data = null;
+  // Debug data structure before using it
+  console.log('[PAGE DEBUG] Received data:', {
+    dataType: typeof data,
+    dataKeys: data ? Object.keys(data) : 'undefined',
+    teams: data?.teams ? { type: typeof data.teams, length: Array.isArray(data.teams) ? data.teams.length : 'not array' } : 'undefined',
+    contacts: data?.contacts ? typeof data.contacts : 'undefined',
+    loadContext: data?.loadContext
+  });
   
-  let teams = [];
-  let contacts = contactsData || {}; // Initialize with static data
-  let mounted = false;
-  let loading = true;
-  let error = null;
-  
-  console.log('[PAGE] Starting with simplified client-side approach');
+  // Create safe wrapper to prevent undefined access errors
+  const safeData = createSafeDataWrapper(data);
+  const teams = safeData.teams;
 
   let showSignInModal = false;
   let selectedTeam = null;
@@ -27,76 +33,42 @@
   let errorMessage = '';
 
   let signedInTeam = null;
+  let mounted = false;
 
-  onMount(async () => {
-    console.log('[PAGE] onMount starting (client-side only)...');
+  onMount(() => {
+    console.log('[PAGE DEBUG] onMount starting...');
+    
+    // Setup hydration debugging and error recovery FIRST
+    if (browser) {
+      setupHydrationErrorMonitoring();
+      setupComponentErrorRecovery();
+      debugHydrationMismatch('home-page', data);
+    }
+    
     mounted = true;
     
-    if (!browser) return;
-    
-    try {
-      // Load data client-side to avoid hydration issues
-      console.log('[PAGE] Loading teams data client-side...');
-      const response = await fetch('/api/teams-client');
-      
-      if (!response.ok) {
-        // Fallback: try to use server data if available
-        if (data && data.teams) {
-          console.log('[PAGE] Using server data as fallback');
-          teams = data.teams;
-          if (data.contacts && Object.keys(data.contacts).length > 0) {
-            contacts = { ...contacts, ...data.contacts };
-          }
-        } else {
-          throw new Error(`Failed to load teams: ${response.status}`);
-        }
-      } else {
-        const result = await response.json();
-        teams = result.teams || [];
-        if (result.contacts && Object.keys(result.contacts).length > 0) {
-          contacts = { ...contacts, ...result.contacts };
-        }
-        console.log(`[PAGE] Loaded ${teams.length} teams client-side`);
-      }
-      
-      loading = false;
-      
-    } catch (loadError) {
-      console.error('[PAGE] Failed to load data:', loadError);
-      error = loadError.message;
-      loading = false;
-      
-      // Try to use server data as last resort
-      if (data && data.teams) {
-        console.log('[PAGE] Using server data as last resort');
-        teams = data.teams;
-        if (data.contacts && Object.keys(data.contacts).length > 0) {
-          contacts = { ...contacts, ...data.contacts };
-        }
-        error = null;
+    // Check and clear old deployment data, then get current session
+    if (browser) {
+      try {
+        console.log('[PAGE DEBUG] Running auth checks...');
+        
+        // Check cache version first - clears everything if version changed
+        checkCacheVersion();
+        
+        // Clear old deployment data
+        checkAndClearOldAuth();
+        
+        // Get current signed in team if any
+        signedInTeam = getSignedInTeam();
+        
+        console.log('[PAGE DEBUG] Auth check complete, signedInTeam:', signedInTeam);
+      } catch (error) {
+        console.error('[PAGE DEBUG] Error in session check:', error);
+        signedInTeam = null;
       }
     }
     
-    // Initialize authentication
-    try {
-      console.log('[PAGE] Setting up authentication...');
-      
-      // Check cache version first - clears everything if version changed
-      checkCacheVersion();
-      
-      // Clear old deployment data
-      checkAndClearOldAuth();
-      
-      // Get current signed in team if any
-      signedInTeam = getSignedInTeam();
-      
-      console.log('[PAGE] Authentication setup complete, signedInTeam:', signedInTeam);
-    } catch (authError) {
-      console.error('[PAGE] Error in session check:', authError);
-      signedInTeam = null;
-    }
-    
-    console.log('[PAGE] onMount complete, teams:', teams.length);
+    console.log('[PAGE DEBUG] onMount complete');
   });
 
   function handleTeamClick(team) {
@@ -194,64 +166,6 @@
 </script>
 
 <style>
-  .loading-container, .error-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 300px;
-    padding: 2rem;
-    text-align: center;
-  }
-  
-  .loading-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(59, 130, 246, 0.3);
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  .loading-text {
-    color: #e2e8f0;
-    font-size: 1rem;
-    font-weight: 500;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  
-  .error-container h2 {
-    color: #ef4444;
-    margin-bottom: 1rem;
-  }
-  
-  .error-container p {
-    color: #e2e8f0;
-    margin-bottom: 1rem;
-  }
-  
-  .error-container button {
-    padding: 0.75rem 1.5rem;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  
   :global(body) {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -658,6 +572,14 @@
     color: #3b82f6;
   }
 
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
 
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -675,6 +597,10 @@
     }
   }
 
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 
   /* Mobile optimizations */
   @media (max-width: 640px) {
@@ -763,6 +689,10 @@
     margin: 0 auto 1rem;
   }
   
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
 
 {#if mounted}
@@ -786,20 +716,7 @@
   </div>
   
 
-  {#if loading}
-    <div class="loading-container">
-      <div class="loading-spinner">
-        <div class="spinner"></div>
-        <div class="loading-text">Loading teams...</div>
-      </div>
-    </div>
-  {:else if error}
-    <div class="error-container">
-      <h2>Error Loading Teams</h2>
-      <p>{error}</p>
-      <button on:click={() => window.location.reload()}>Retry</button>
-    </div>
-  {:else if teams && teams.length > 0}
+  {#if teams && teams.length > 0}
     <div class="teams-grid">
       {#each teams as team}
         <button class="team-card" on:click={() => handleTeamClick(team)}>
@@ -823,8 +740,7 @@
     </div>
   {:else}
     <div class="no-teams">
-      <p>No teams found. The API server may not be running.</p>
-      <button on:click={() => window.location.reload()}>Retry</button>
+      <p>No teams found. Make sure the FastAPI server is running on localhost:8000</p>
     </div>
   {/if}
   

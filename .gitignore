@@ -22,3 +22,9 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Bid data
+bids.json
+
+# Bid window settings
+bid-window-settings.json

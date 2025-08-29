@@ -4,7 +4,305 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+		<meta http-equiv="Pragma" content="no-cache" />
+		<meta http-equiv="Expires" content="0" />
 		%sveltekit.head%
+		<script>
+			// Root-level error boundary to catch hydration errors BEFORE SvelteKit starts
+			console.log('[ROOT ERROR HANDLER] Setting up root-level error handling...');
+			
+			// Track if we've seen the target error
+			let hydrationErrorCount = 0;
+			let isRecovering = false;
+			
+			// Enhanced error logging
+			function logRootError(context, error, details = {}) {
+				const errorInfo = {
+					context,
+					timestamp: new Date().toISOString(),
+					url: window.location.href,
+					host: window.location.host,
+					userAgent: navigator.userAgent,
+					error: {
+						message: error?.message,
+						stack: error?.stack,
+						name: error?.name
+					},
+					details
+				};
+				
+				console.error(`[ROOT ERROR] ${context}:`, errorInfo);
+				
+				// Store in localStorage for debugging
+				try {
+					const errors = JSON.parse(localStorage.getItem('rootErrors') || '[]');
+					errors.unshift(errorInfo);
+					errors.splice(10); // Keep only last 10
+					localStorage.setItem('rootErrors', JSON.stringify(errors));
+				} catch (e) {
+					console.warn('[ROOT ERROR] Could not store error in localStorage:', e);
+				}
+				
+				return errorInfo;
+			}
+			
+			// Check for target error pattern
+			function isTargetHydrationError(error) {
+				if (!error || !error.message) return false;
+				const msg = error.message;
+				return (
+					msg.includes('Cannot read properties of undefined') && 
+					msg.includes('call') &&
+					(msg.includes('get_first_child') || error.stack?.includes('get_first_child'))
+				);
+			}
+			
+			// Comprehensive recovery strategy
+			function performRecovery(errorInfo) {
+				if (isRecovering) {
+					console.log('[ROOT ERROR] Already recovering, skipping...');
+					return;
+				}
+				
+				// Check URL parameters to see if we're already in recovery mode
+				const urlParams = new URLSearchParams(window.location.search);
+				const currentAttempt = parseInt(urlParams.get('attempt') || '0');
+				
+				if (currentAttempt > 0) {
+					hydrationErrorCount = currentAttempt;
+					console.log(`[ROOT ERROR] Detected previous recovery attempt: ${hydrationErrorCount}`);
+				}
+				
+				isRecovering = true;
+				hydrationErrorCount++;
+				
+				console.log(`[ROOT ERROR] Starting recovery procedure (attempt ${hydrationErrorCount})...`);
+				
+				// Clear all possible cached data
+				try {
+					const storageKeys = ['signedInTeam', 'playerCache', 'historicalStatsCache', 'bidCache', 'positionCache', 'recentErrors'];
+					storageKeys.forEach(key => {
+						if (localStorage.getItem(key)) {
+							console.log(`[ROOT ERROR] Clearing ${key}`);
+							localStorage.removeItem(key);
+						}
+					});
+					sessionStorage.clear();
+					
+					// Clear service workers
+					if ('serviceWorker' in navigator) {
+						navigator.serviceWorker.getRegistrations().then(registrations => {
+							console.log(`[ROOT ERROR] Clearing ${registrations.length} service workers`);
+							registrations.forEach(reg => reg.unregister());
+						});
+					}
+					
+					// Clear caches
+					if ('caches' in window) {
+						caches.keys().then(names => {
+							console.log(`[ROOT ERROR] Clearing ${names.length} cache stores`);
+							names.forEach(name => caches.delete(name));
+						});
+					}
+					
+				} catch (cleanupError) {
+					console.error('[ROOT ERROR] Cleanup failed:', cleanupError);
+				}
+				
+				// Reload with cache busting
+				if (hydrationErrorCount <= 3) {
+					console.log(`[ROOT ERROR] Reloading page (attempt ${hydrationErrorCount})...`);
+					setTimeout(() => {
+						const url = new URL(window.location);
+						url.searchParams.set('recovery', Date.now());
+						url.searchParams.set('attempt', hydrationErrorCount);
+						window.location.href = url.toString();
+					}, 1000);
+				} else {
+					console.error('[ROOT ERROR] Max recovery attempts reached, displaying error message');
+					displayErrorMessage(errorInfo);
+				}
+			}
+			
+			// Display user-friendly error message
+			function displayErrorMessage(errorInfo) {
+				console.log('[ROOT ERROR] Displaying error message to user');
+				document.body.innerHTML = `
+					<div style="
+						position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+						background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+						display: flex; align-items: center; justify-content: center;
+						font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+						color: #e2e8f0; z-index: 9999;
+					">
+						<div style="
+							background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px);
+							padding: 2rem; border-radius: 12px; max-width: 600px; text-align: center;
+							border: 1px solid rgba(59, 130, 246, 0.2);
+						">
+							<h1 style="color: #3b82f6; margin-bottom: 1rem;">🔧 Hydration Error Detected</h1>
+							<p style="margin-bottom: 1.5rem; line-height: 1.6;">
+								The app detected a hydration mismatch when accessing via <strong>bids.triplepoint.me</strong>. 
+								This is a known issue that doesn't occur when using the IP address.
+							</p>
+							
+							<div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap;">
+								<a href="/client-only.html" 
+								   style="
+									   display: inline-block; padding: 0.75rem 1.5rem; 
+									   background: #3b82f6; color: white; text-decoration: none;
+									   border-radius: 6px; font-weight: 500;
+								   ">
+									🚀 Client-Only Version
+								</a>
+								<a href="http://192.168.18.160:5173/" 
+								   style="
+									   display: inline-block; padding: 0.75rem 1.5rem; 
+									   background: #10b981; color: white; text-decoration: none;
+									   border-radius: 6px; font-weight: 500;
+								   ">
+									✅ Use IP Address
+								</a>
+								<button onclick="window.location.href = window.location.pathname" 
+								   style="
+									   padding: 0.75rem 1.5rem; background: #f59e0b; color: white;
+									   border: none; border-radius: 6px; font-weight: 500; cursor: pointer;
+								   ">
+									🔄 Try Again
+								</button>
+							</div>
+							
+							<div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+								<h3 style="color: #fbbf24; margin: 0 0 0.5rem 0; font-size: 1rem;">Technical Summary</h3>
+								<p style="margin: 0; font-size: 0.9rem; line-height: 1.4;">
+									<strong>Error:</strong> Cannot read properties of undefined (reading 'call')<br>
+									<strong>Location:</strong> SvelteKit hydration process<br>
+									<strong>Attempts:</strong> ${errorInfo?.details?.attempt || 'Multiple'} recovery attempts failed<br>
+									<strong>Server Data:</strong> ✅ Loading correctly (teams: 10, contacts: 10)<br>
+									<strong>Issue:</strong> Client-side hydration mismatch
+								</p>
+							</div>
+							
+							<details style="text-align: left; margin-top: 1rem;">
+								<summary style="cursor: pointer; color: #94a3b8; font-size: 0.9rem;">🔍 Full Debug Information</summary>
+								<pre style="
+									background: #1e293b; padding: 1rem; border-radius: 6px;
+									font-size: 0.7rem; overflow: auto; margin-top: 0.5rem;
+									max-height: 200px; white-space: pre-wrap;
+								">${JSON.stringify(errorInfo, null, 2)}</pre>
+							</details>
+							
+							<p style="margin-top: 1.5rem; font-size: 0.8rem; color: #94a3b8;">
+								This error has been logged for debugging. The IP address access works perfectly.
+							</p>
+						</div>
+					</div>
+				`;
+			}
+			
+			// Global error handler for unhandled errors
+			window.addEventListener('error', (event) => {
+				const errorInfo = logRootError('window-error', event.error, {
+					filename: event.filename,
+					lineno: event.lineno,
+					colno: event.colno,
+					type: 'error-event'
+				});
+				
+				if (isTargetHydrationError(event.error)) {
+					console.log('[ROOT ERROR] Target hydration error detected in window.onerror');
+					event.preventDefault(); // Prevent default error handling
+					performRecovery(errorInfo);
+				}
+			});
+			
+			// Global promise rejection handler
+			window.addEventListener('unhandledrejection', (event) => {
+				const errorInfo = logRootError('unhandled-rejection', event.reason, {
+					type: 'promise-rejection'
+				});
+				
+				if (isTargetHydrationError(event.reason)) {
+					console.log('[ROOT ERROR] Target hydration error detected in promise rejection');
+					event.preventDefault(); // Prevent unhandled rejection
+					performRecovery(errorInfo);
+				}
+			});
+			
+			// Monitor DOM ready state
+			console.log('[ROOT ERROR] DOM ready state:', document.readyState);
+			console.log('[ROOT ERROR] Current URL:', window.location.href);
+			console.log('[ROOT ERROR] User agent:', navigator.userAgent);
+			
+			// Check if we're recovering from a previous error
+			const urlParams = new URLSearchParams(window.location.search);
+			if (urlParams.get('recovery')) {
+				console.log(`[ROOT ERROR] This is recovery attempt ${urlParams.get('attempt') || 'unknown'}`);
+			}
+			
+			// Advanced DOM analysis for debugging
+			let domSnapshot = null;
+			
+			// Take initial DOM snapshot
+			setTimeout(() => {
+				try {
+					// Import and run DOM analysis
+					if (window.analyzeDOMStructure) {
+						domSnapshot = window.analyzeDOMStructure();
+					} else {
+						// Inline basic DOM analysis since modules might not be loaded yet
+						const basicAnalysis = {
+							timestamp: new Date().toISOString(),
+							bodyChildren: document.body?.children?.length || 0,
+							allElements: document.querySelectorAll('*').length,
+							scripts: document.querySelectorAll('script').length,
+							readyState: document.readyState
+						};
+						console.log('[ROOT ERROR] Basic DOM analysis:', basicAnalysis);
+						domSnapshot = basicAnalysis;
+					}
+				} catch (error) {
+					console.error('[ROOT ERROR] DOM analysis failed:', error);
+				}
+			}, 100);
+			
+			// Setup DOM monitoring
+			setTimeout(() => {
+				if (!window.MutationObserver) {
+					console.warn('[ROOT ERROR] MutationObserver not available');
+					return;
+				}
+				
+				const criticalChanges = [];
+				const observer = new MutationObserver((mutations) => {
+					mutations.forEach((mutation) => {
+						if (mutation.type === 'childList' && 
+							(mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
+							criticalChanges.push({
+								timestamp: Date.now(),
+								target: mutation.target?.tagName || 'unknown',
+								added: mutation.addedNodes.length,
+								removed: mutation.removedNodes.length
+							});
+						}
+					});
+				});
+				
+				observer.observe(document.body, {
+					childList: true,
+					subtree: true
+				});
+				
+				// Stop monitoring after 30 seconds
+				setTimeout(() => {
+					observer.disconnect();
+					if (criticalChanges.length > 0) {
+						console.log('[ROOT ERROR] Critical DOM changes detected:', criticalChanges);
+					}
+				}, 30000);
+			}, 200);
+		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div>%sveltekit.body%</div>

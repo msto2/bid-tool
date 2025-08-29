@@ -15,13 +15,6 @@ This is a **Fantasy Football Bid Tool** that provides a comprehensive interface 
 - `npm run check` - Type check TypeScript files
 - `npm run check:watch` - Type check in watch mode
 
-### Authentication System
-The application features a comprehensive, production-ready email and SMS authentication system:
-- **Email Service**: Brevo (formerly Sendinblue) with professional HTML templates
-- **SMS Service**: TextBee.dev with device-based messaging
-- **Security**: Environment-aware code display (development only)
-- **Contact Management**: Environment variable-based team contact storage
-
 ### Package Commands
 - `npm run prepack` - Sync SvelteKit and build package with publint
 - `npm pack` - Create distributable package
@@ -116,46 +109,8 @@ All pages follow a consistent, clean header design pattern:
 ### Required Environment Variables (`.env`)
 - `SWID` - ESPN session cookie for user identification
 - `ESPN_S2` - ESPN session cookie for authentication
-- `BREVO_API_KEY` - Brevo API key for email authentication (starts with `xkeysib-`)
-- `TEXTBEE_API_KEY` - TextBee API key for SMS authentication
-- `TEXTBEE_DEVICE_ID` - TextBee device ID for SMS sending
-- `CONTACTS` - JSON string containing team contact information for authentication
 
-### Email Authentication System
-The application uses Brevo (formerly Sendinblue) for email verification:
-- **Professional Email Templates**: HTML-formatted verification codes
-- **Verified Sender**: Uses `admin@triplepoint.me` as the verified sender address
-- **Development Mode**: Shows verification codes in console for testing
-- **Production Ready**: Fully configured for production email delivery
-
-### SMS Authentication System
-The application uses TextBee.dev for SMS verification:
-- **Device-Based Messaging**: Uses your connected device for SMS delivery
-- **Rate Limited**: 60 messages per minute limit
-- **Professional Messages**: Branded verification code messages
-- **Production Ready**: Fully configured for live SMS delivery
-
-### Security Features
-- **Environment-Aware Logging**: Verification codes only logged in development mode
-- **Production Security**: No verification codes displayed or logged in production builds
-- **Secure API Responses**: Codes only returned in development, hidden in production
-- **Contact Privacy**: Team contact information stored securely in environment variables
-
-These environment variables are required to access private league data from ESPN's API and send authentication messages.
-
-## Security Architecture
-
-### Production Security Features
-- **No Code Display**: Verification codes never displayed in the UI (removed development display)
-- **Environment-Aware Logging**: Console logging only in development mode (`dev` environment)
-- **Secure API Responses**: Verification codes only returned in API during development
-- **Contact Privacy**: Team contact information moved from code files to environment variables
-- **Session Security**: Authentication tokens with expiration and validation
-
-### Development vs Production
-- **Development**: Enhanced logging and API responses include codes for testing
-- **Production**: Complete code security with no verification code exposure
-- **Build Process**: Automatic environment detection ensures proper behavior
+These cookies are required to access private league data from ESPN's API.
 
 ### External Dependencies
 - **Python ESPN API Package**: Included in `espn-api-0.45.1/` directory

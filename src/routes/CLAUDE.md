@@ -51,11 +51,10 @@ The root routes directory contains the main application entry points, authentica
 - **Visual Feedback**: Active method highlighting and delivery address display
 
 #### Step 3: Code Verification
-- **Production Security**: No verification codes displayed on screen
+- **Development Mode**: Shows verification code in UI for testing
 - **Input Validation**: 4-6 character code requirement
 - **Error Handling**: Clear feedback for invalid codes
 - **Keyboard Support**: Enter key submission
-- **Real Verification**: Users must check actual email/SMS for codes
 
 #### Step 4: Success & Redirect
 - **Success Animation**: Checkmark icon with welcome message
@@ -66,10 +65,8 @@ The root routes directory contains the main application entry points, authentica
 
 #### Verification Code System
 - **Code Generation**: 6-digit random codes
-- **Brevo Email Integration**: Live email delivery via Brevo (formerly Sendinblue)
-- **Professional Email Templates**: HTML-formatted verification emails
 - **Development Logging**: Console output for email/SMS codes
-- **TextBee SMS Integration**: Live SMS delivery via TextBee.dev
+- **Production Ready**: Commented examples for Twilio (SMS) and SendGrid (email)
 - **Error Handling**: Comprehensive validation and error responses
 
 #### Security Features
@@ -152,11 +149,9 @@ The root routes directory contains the main application entry points, authentica
 - **Data Mapping**: Team ID consistency across systems
 
 ### Contact System
-- **Environment Variable**: `CONTACTS` in `.env` file
-- **Format**: JSON string mapping team IDs to contact objects
+- **File Location**: `src/lib/data/contacts.js`
 - **ID Mapping**: Links team IDs to contact information
 - **Verification Integration**: Email/SMS delivery addresses
-- **Server-side Loading**: Parsed and passed via load functions to components
 
 ### Route Protection
 - **No Auto-redirect**: Authenticated users can stay on home page (changed from automatic redirect)
@@ -181,19 +176,17 @@ The root routes directory contains the main application entry points, authentica
 
 ## Development Considerations
 
-### Production Setup
-- **Email Service**: Brevo integration active with verified sender `admin@triplepoint.me`
-- **SMS Service**: TextBee.dev integration active with device-based messaging
-- **Environment Variables**: `BREVO_API_KEY`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`, `CONTACTS` required in `.env` file
-- **Security**: Environment-aware code logging and API responses
-- **Rate Limiting**: TextBee has 60 messages/minute limit, structure ready for additional throttling
+### Code Generation (Production)
+- **Email Service**: Integrate SendGrid or similar
+- **SMS Service**: Integrate Twilio or similar
+- **Environment Variables**: Store API keys securely
+- **Rate Limiting**: Implement request throttling
 
 ### Testing Strategies
-- **Development Mode**: Console logging and API codes for testing (no UI display)
-- **Production Mode**: Complete security - no code exposure anywhere
-- **Authentication Flow**: Test all modal steps and edge cases with real email/SMS
+- **Development Mode**: Visible codes for testing
+- **Mock Services**: Simulate email/SMS in development
+- **Authentication Flow**: Test all modal steps and edge cases
 - **Mobile Testing**: Ensure touch interactions work properly
-- **Security Testing**: Verify no codes leak in production builds
 
 ### Error Recovery
 - **Network Failures**: Clear error messages and retry options

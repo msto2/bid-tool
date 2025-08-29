@@ -1,25 +1,30 @@
 import { json } from '@sveltejs/kit';
-
-const EXTERNAL_API_BASE = 'http://localhost:8000';
+import { apiRequest, parseJsonResponse } from '$lib/apiConfig.js';
 
 export async function GET({ params }) {
+    const context = 'player-status-api';
     const { playerId } = params;
     
+    console.log(`[${context.toUpperCase()}] Request for player status ID: ${playerId}`);
+    
     if (!playerId) {
+        console.warn(`[${context.toUpperCase()}] Missing playerId parameter`);
         return json({ error: 'playerId parameter is required' }, { status: 400 });
     }
     
     try {
-        const response = await fetch(`${EXTERNAL_API_BASE}/player-free-agent-status/${playerId}`);
+        console.log(`[${context.toUpperCase()}] Fetching free agent status for ID: ${playerId}`);
+        const response = await apiRequest(`/player-free-agent-status/${playerId}`, {}, context);
+        const data = await parseJsonResponse(response, context);
         
-        if (!response.ok) {
-            return json({ error: 'Failed to fetch player free agent status' }, { status: response.status });
-        }
-        
-        const data = await response.json();
+        console.log(`[${context.toUpperCase()}] Status check complete for player ${playerId}: ${data?.isFreeAgent ? 'available' : 'unavailable'}`);
         return json(data);
+        
     } catch (error) {
-        console.error('Error fetching player free agent status:', error);
-        return json({ error: 'Failed to fetch player free agent status' }, { status: 500 });
+        console.error(`[${context.toUpperCase()}] Error fetching player status:`, error);
+        return json({ 
+            error: 'Failed to fetch player free agent status',
+            details: error.message 
+        }, { status: 500 });
     }
 }

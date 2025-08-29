@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fantasy Football Bid Tool</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            margin: 0;
+            padding: 0;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-text {
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .error-title {
+            color: #3b82f6;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+        
+        .error-message {
+            color: #e2e8f0;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .button {
+            padding: 0.75rem 1.5rem;
+            background: #10b981;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            display: inline-block;
+            margin: 0.5rem;
+        }
+        
+        .button:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading-container">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading Fantasy Football Bid Tool...</div>
+                <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">
+                    Client-side loading to bypass hydration issues
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('[CLIENT-ONLY] Starting pure client-side application...');
+        
+        // Simple client-side application
+        async function loadApp() {
+            try {
+                console.log('[CLIENT-ONLY] Loading teams data...');
+                
+                // Try to load teams data
+                const response = await fetch('/api/teams-client');
+                if (!response.ok) {
+                    throw new Error(`Failed to load data: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('[CLIENT-ONLY] Data loaded:', data);
+                
+                // Render the teams
+                renderTeams(data.teams, data.contacts);
+                
+            } catch (error) {
+                console.error('[CLIENT-ONLY] Failed to load app:', error);
+                showError(error);
+            }
+        }
+        
+        function renderTeams(teams, contacts) {
+            const app = document.getElementById('app');
+            
+            const html = `
+                <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+                    <div style="text-align: center; margin-bottom: 3rem;">
+                        <h1 style="
+                            font-size: 3rem; 
+                            background: linear-gradient(135deg, #3b82f6, #06b6d4, #10b981);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            background-clip: text;
+                            margin-bottom: 0.5rem;
+                            text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+                        ">Aliquippa Keeper League</h1>
+                        <p style="color: #94a3b8; font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">
+                            Choose your team to get started
+                        </p>
+                        <p style="color: #64748b; font-size: 0.9rem;">
+                            League ID: 3925 • Season: 2025
+                        </p>
+                    </div>
+                    
+                    <div style="
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                        gap: 1.5rem;
+                        margin-top: 2rem;
+                    ">
+                        ${teams.map(team => `
+                            <div onclick="handleTeamClick('${team.id}', '${team.team_name.replace("'", "\\'")}'); style="
+                                background: rgba(30, 41, 59, 0.8);
+                                backdrop-filter: blur(10px);
+                                padding: 1.5rem;
+                                border-radius: 12px;
+                                border: 1px solid rgba(148, 163, 184, 0.2);
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                            " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 40px rgba(59, 130, 246, 0.15)'; this.style.borderColor='rgba(59, 130, 246, 0.4)';" 
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0, 0, 0, 0.3)'; this.style.borderColor='rgba(148, 163, 184, 0.2)';">
+                                <h2 style="
+                                    font-size: 1.25rem;
+                                    font-weight: 600;
+                                    color: #f1f5f9;
+                                    margin: 0 0 1rem 0;
+                                    text-align: center;
+                                ">${team.team_name}</h2>
+                                <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                                    <div style="
+                                        text-align: center;
+                                        background: rgba(15, 23, 42, 0.6);
+                                        border-radius: 8px;
+                                        padding: 0.5rem 0.75rem;
+                                        min-width: 50px;
+                                    ">
+                                        <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Record</div>
+                                        <div style="font-size: 1rem; font-weight: 700; color: #10b981;">${team.wins}-${team.losses}</div>
+                                    </div>
+                                    <div style="
+                                        text-align: center;
+                                        background: rgba(15, 23, 42, 0.6);
+                                        border-radius: 8px;
+                                        padding: 0.5rem 0.75rem;
+                                        min-width: 50px;
+                                    ">
+                                        <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Points</div>
+                                        <div style="font-size: 1rem; font-weight: 700; color: #10b981;">${team.points_for || 0}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 3rem;">
+                        <p style="color: #94a3b8; font-size: 0.9rem;">
+                            ✅ Client-side only version - bypasses hydration issues completely
+                        </p>
+                        <p style="color: #64748b; font-size: 0.8rem; margin-top: 0.5rem;">
+                            Teams loaded: ${teams.length} • Contacts available: ${Object.keys(contacts || {}).length}
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            app.innerHTML = html;
+        }
+        
+        function handleTeamClick(teamId, teamName) {
+            alert(`Selected team: ${teamName} (ID: ${teamId})\\n\\nThis would normally open the sign-in modal.\\n\\nFor now, you can use the IP address version for full functionality: http://192.168.18.160:5173/`);
+        }
+        
+        function showError(error) {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="error-container">
+                    <div class="error-title">🔧 Unable to Load Application</div>
+                    <div class="error-message">
+                        <p>The client-side version couldn't load the team data.</p>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Please try the IP address version instead:</p>
+                    </div>
+                    <a href="http://192.168.18.160:5173/" class="button">
+                        ✅ Use IP Address Version
+                    </a>
+                    <button onclick="location.reload()" class="button" style="background: #f59e0b; border: none; cursor: pointer;">
+                        🔄 Try Again
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Start the app
+        loadApp();
+    </script>
+</body>
+</html>
