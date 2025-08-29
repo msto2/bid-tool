@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { logClientError, logAppState, setupDOMMonitoring, setupSvelteErrorMonitoring, getDebugInfo } from '$lib/clientDebug.js';
+  import { analyzeDOMStructure, setupDOMMonitoring as setupAdvancedDOMMonitoring } from '$lib/domAnalysis.js';
   
   let mounted = false;
   let errorCount = 0;
@@ -18,6 +19,21 @@
       // Setup enhanced monitoring
       setupDOMMonitoring();
       setupSvelteErrorMonitoring();
+      
+      // Setup advanced DOM analysis
+      try {
+        const domAnalysis = analyzeDOMStructure();
+        console.log('[LAYOUT] Initial DOM analysis complete');
+        
+        // Setup continuous monitoring
+        setupAdvancedDOMMonitoring(30000);
+        
+        // Make analysis available globally for root error handler
+        window.analyzeDOMStructure = analyzeDOMStructure;
+        
+      } catch (error) {
+        console.error('[LAYOUT] Failed to setup DOM analysis:', error);
+      }
       
       // Enhanced localStorage cleanup function with logging
       const clearAllLocalStorage = (reason = 'unknown') => {
