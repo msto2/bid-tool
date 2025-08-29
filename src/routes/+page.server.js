@@ -85,7 +85,6 @@ export async function load() {
     
     const teams = await teamsRes.json();
     
-    // Ensure data structure is always consistent
     return {
       teams
     };
