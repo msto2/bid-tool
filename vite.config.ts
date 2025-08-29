@@ -3,18 +3,23 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	server: {
-		host: '0.0.0.0', // Explicitly bind to all interfaces 
+		host: '0.0.0.0',
 		port: 5173,
-		allowedHosts: ['bids.triplepoint.me', 'localhost', '127.0.0.1'],
 		cors: true,
-		// Add network access configuration
+		// Configure HMR for proxy setup
 		hmr: {
-			port: 5174, // Use different port for HMR to avoid conflicts
-			host: '0.0.0.0' // Also bind HMR to all interfaces
+			// Use the same port as the main server to work through proxy
+			port: 5173,
+			host: 'bids.triplepoint.me',
+			protocol: 'wss'
+		},
+		// Proxy configuration for development when accessed through domain
+		proxy: {
+			// This helps with API calls during development
 		}
 	},
 	preview: {
-		host: true,
+		host: '0.0.0.0',
 		port: 5173,
 		cors: true
 	},

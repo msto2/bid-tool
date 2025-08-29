@@ -10,9 +10,12 @@ export function getApiBaseUrl() {
   
   // In production, on the browser side
   if (browser) {
-    // If accessing via domain with nginx proxy, use the proxied API route
+    // If accessing via domain, try to use port 8000 on the same domain
     if (window.location.hostname === 'bids.triplepoint.me') {
-      return `${window.location.protocol}//${window.location.host}/api/external`;
+      // Try HTTPS first, fallback to HTTP
+      return window.location.protocol === 'https:' 
+        ? 'https://bids.triplepoint.me:8000'
+        : 'http://bids.triplepoint.me:8000';
     }
     // For IP access, use the same host but port 8000
     if (window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
