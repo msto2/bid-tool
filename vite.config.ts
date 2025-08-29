@@ -7,15 +7,15 @@ export default defineConfig({
 		port: 5173,
 		allowedHosts: ['bids.triplepoint.me']
 	},
-	build: {
-		rollupOptions: {
-			output: {
-				// Generate unique filenames for cache busting
-				entryFileNames: 'assets/[name]-[hash].js',
-				chunkFileNames: 'assets/[name]-[hash].js',
-				assetFileNames: 'assets/[name]-[hash].[ext]'
-			}
-		}
-	},
+	// build: {
+	// 	rollupOptions: {
+	// 		output: {
+	// 			// Generate unique filenames for cache busting
+	// 			entryFileNames: 'assets/[name]-[hash].js',
+	// 			chunkFileNames: 'assets/[name]-[hash].js',
+	// 			assetFileNames: 'assets/[name]-[hash].[ext]'
+	// 		}
+	// 	}
+	// },
 	plugins: [sveltekit()]
 });
