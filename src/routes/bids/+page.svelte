@@ -2,11 +2,12 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
+  import { contacts } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam } from '$lib/simple-auth-reset.js';
   import BidWindowStatus from '$lib/components/BidWindowStatus.svelte';
 
   export let data;
-  const { teams, contacts } = data;
+  const { teams } = data;
   let { bids } = data;
 
   let signedInTeam = null;

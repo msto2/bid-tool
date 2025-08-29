@@ -11,7 +11,7 @@ emailApi.authentications.apiKey.apiKey = BREVO_API_KEY;
 // In development, we'll generate simple codes
 // In production, you would integrate with services like:
 // - Twilio for SMS
-// - Brevo, SendGrid, Mailgun, or similar for email
+// - SendGrid, Mailgun, or similar for email
 
 function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -134,8 +134,9 @@ export async function POST({ request }) {
         return json({ error: 'Invalid method' }, { status: 400 });
       }
 
-      const response = {
+      return json({
         success: true,
+        code, // In development, return the code. In production, remove this!
         message: `Verification code sent via ${method}`,
         maskedContact: method === 'email' ? maskEmail(email) : maskPhone(phone)
       };

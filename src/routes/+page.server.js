@@ -1,5 +1,3 @@
-import { CONTACTS } from '$env/static/private';
-
 /** @type {import('./$types.d.ts').PageServerLoad} */
 export async function load() {
   try {
@@ -87,20 +85,14 @@ export async function load() {
     
     const teams = await teamsRes.json();
     
-    // Parse contacts from environment variable
-    const contacts = JSON.parse(CONTACTS);
->>>>>>> parent of 8f3edf1 (connect to web)
-    
     // Ensure data structure is always consistent
     return {
-      teams: Array.isArray(teams) ? teams : [],
-      contacts: contacts && typeof contacts === 'object' ? contacts : {}
+      teams
     };
   } catch (error) {
     console.error('Error fetching teams:', error);
     return {
-      teams: [],
-      contacts: {}
+      teams: []
     };
   }
 }
