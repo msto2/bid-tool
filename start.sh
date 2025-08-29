@@ -15,6 +15,9 @@ rm -rf .svelte-kit 2>/dev/null || true
 rm -rf node_modules/.vite 2>/dev/null || true
 npm cache clean --force 2>/dev/null || true
 
+echo "Regenerating SvelteKit files..."
+npm run prepare 2>/dev/null || npx svelte-kit sync 2>/dev/null || echo "SvelteKit sync will happen on dev start"
+
 echo "Cleanup complete."
 echo
 
