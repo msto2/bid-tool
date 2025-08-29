@@ -77,9 +77,10 @@ export async function load() {
       ];
     }
     
+    // Ensure data structure is always consistent
     return {
-      teams,
-      contacts
+      teams: Array.isArray(teams) ? teams : [],
+      contacts: contacts && typeof contacts === 'object' ? contacts : {}
     };
   } catch (error) {
     console.error('Error in page load function:', error);
