@@ -231,6 +231,7 @@
     100% { transform: rotate(360deg); }
   }
   
+  
   .error-container h2 {
     color: #ef4444;
     margin-bottom: 1rem;
@@ -249,7 +250,8 @@
     border-radius: 6px;
     cursor: pointer;
     font-weight: 500;
-  }</style>
+  }
+  
   :global(body) {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -656,14 +658,6 @@
     color: #3b82f6;
   }
 
-  .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
 
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -681,10 +675,6 @@
     }
   }
 
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
 
   /* Mobile optimizations */
   @media (max-width: 640px) {
@@ -773,10 +763,6 @@
     margin: 0 auto 1rem;
   }
   
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
 </style>
 
 {#if mounted}
