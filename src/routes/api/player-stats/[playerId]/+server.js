@@ -1,25 +1,25 @@
 import { json } from '@sveltejs/kit';
 
-/** @type {import('./$types').RequestHandler} */
-export async function GET({ params }) {
-	const { playerId } = params;
-	
-	if (!playerId) {
-		return json({ error: 'Player ID required' }, { status: 400 });
-	}
+const EXTERNAL_API_BASE = 'http://localhost:8000';
 
-	try {
-		// Proxy the request to the external API server
-		const response = await fetch(`http://127.0.0.1:8000/player-stats/${playerId}`);
-		
-		if (!response.ok) {
-			throw new Error(`External API responded with status: ${response.status}`);
-		}
-		
-		const data = await response.json();
-		return json(data);
-	} catch (error) {
-		console.error('Error fetching player stats:', error);
-		return json({ error: 'Failed to fetch player stats' }, { status: 500 });
-	}
+export async function GET({ url }) {
+    const playerId = url.searchParams.get('playerId');
+    
+    if (!playerId) {
+        return json({ error: 'playerId parameter is required' }, { status: 400 });
+    }
+    
+    try {
+        const response = await fetch(`${EXTERNAL_API_BASE}/playerinfo?playerId=${playerId}`);
+        
+        if (!response.ok) {
+            return json({ error: 'Failed to fetch player info' }, { status: response.status });
+        }
+        
+        const data = await response.json();
+        return json(data);
+    } catch (error) {
+        console.error('Error fetching player info:', error);
+        return json({ error: 'Failed to fetch player info' }, { status: 500 });
+    }
 }

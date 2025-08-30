@@ -2,19 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { contacts as contactsData } from '$lib/data/contacts.js';
   import { checkAndClearOldAuth, getSignedInTeam, createAndSaveSession } from '$lib/simple-auth-reset.js';
-  
-  // Client-side only approach to avoid hydration issues
-  export let data = null;
-  
-  let teams = [];
-  let contacts = contactsData || {}; // Initialize with static data
-  let mounted = false;
-  let loading = true;
-  let error = null;
-  
-  console.log('[PAGE] Starting with simplified client-side approach');
+
+  export let data;
+  const { teams, contacts } = data;
 
   let showSignInModal = false;
   let selectedTeam = null;
@@ -27,72 +18,20 @@
 
   let signedInTeam = null;
 
-  onMount(async () => {
-    console.log('[PAGE] onMount starting (client-side only)...');
-    mounted = true;
-    
-    if (!browser) return;
-    
-    try {
-      // Load data client-side to avoid hydration issues
-      console.log('[PAGE] Loading teams data client-side...');
-      const response = await fetch('/api/teams-client');
-      
-      if (!response.ok) {
-        // Fallback: try to use server data if available
-        if (data && data.teams) {
-          console.log('[PAGE] Using server data as fallback');
-          teams = data.teams;
-          if (data.contacts && Object.keys(data.contacts).length > 0) {
-            contacts = { ...contacts, ...data.contacts };
-          }
-        } else {
-          throw new Error(`Failed to load teams: ${response.status}`);
-        }
-      } else {
-        const result = await response.json();
-        teams = result.teams || [];
-        if (result.contacts && Object.keys(result.contacts).length > 0) {
-          contacts = { ...contacts, ...result.contacts };
-        }
-        console.log(`[PAGE] Loaded ${teams.length} teams client-side`);
-      }
-      
-      loading = false;
-      
-    } catch (loadError) {
-      console.error('[PAGE] Failed to load data:', loadError);
-      error = loadError.message;
-      loading = false;
-      
-      // Try to use server data as last resort
-      if (data && data.teams) {
-        console.log('[PAGE] Using server data as last resort');
-        teams = data.teams;
-        if (data.contacts && Object.keys(data.contacts).length > 0) {
-          contacts = { ...contacts, ...data.contacts };
-        }
-        error = null;
+  onMount(() => {
+    // Check and clear old deployment data, then get current session
+    if (browser) {
+      try {
+        // Clear old deployment data first
+        checkAndClearOldAuth();
+        
+        // Get current signed in team if any
+        signedInTeam = getSignedInTeam();
+      } catch (error) {
+        console.log('Error in session check:', error);
+        signedInTeam = null;
       }
     }
-    
-    // Initialize authentication
-    try {
-      console.log('[PAGE] Setting up authentication...');
-      
-      // Clear old deployment data
-      checkAndClearOldAuth();
-      
-      // Get current signed in team if any
-      signedInTeam = getSignedInTeam();
-      
-      console.log('[PAGE] Authentication setup complete, signedInTeam:', signedInTeam);
-    } catch (authError) {
-      console.error('[PAGE] Error in session check:', authError);
-      signedInTeam = null;
-    }
-    
-    console.log('[PAGE] onMount complete, teams:', teams.length);
   });
 
   function handleTeamClick(team) {
@@ -114,7 +53,7 @@
   }
 
   async function sendVerificationCode() {
-    if (!selectedTeam || !contacts || !contacts[selectedTeam.id]) {
+    if (!selectedTeam || !contacts[selectedTeam.id]) {
       errorMessage = 'Team contact information not found';
       return;
     }
@@ -190,64 +129,6 @@
 </script>
 
 <style>
-  .loading-container, .error-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 300px;
-    padding: 2rem;
-    text-align: center;
-  }
-  
-  .loading-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(59, 130, 246, 0.3);
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  .loading-text {
-    color: #e2e8f0;
-    font-size: 1rem;
-    font-weight: 500;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  
-  .error-container h2 {
-    color: #ef4444;
-    margin-bottom: 1rem;
-  }
-  
-  .error-container p {
-    color: #e2e8f0;
-    margin-bottom: 1rem;
-  }
-  
-  .error-container button {
-    padding: 0.75rem 1.5rem;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  
   :global(body) {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -273,7 +154,7 @@
     text-align: center;
   }
 
-   .user-info {
+  .user-info {
     position: absolute;
     top: 50%;
     right: 0;
@@ -281,6 +162,10 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    background: rgba(30, 41, 59, 0.8);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
     font-size: 0.8rem;
   }
 
@@ -641,19 +526,15 @@
     margin-bottom: 1rem;
   }
 
-  .dev-code {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 6px;
-    padding: 0.75rem;
-    margin: 1rem 0;
-    text-align: center;
-    font-family: monospace;
-    font-size: 1.2rem;
-    letter-spacing: 0.2rem;
-    color: #3b82f6;
-  }
 
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
 
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -671,6 +552,10 @@
     }
   }
 
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 
   /* Mobile optimizations */
   @media (max-width: 640px) {
@@ -730,38 +615,8 @@
       grid-template-columns: 1fr;
     }
   }
-  
-  .loading-state {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  }
-  
-  .loading-spinner {
-    text-align: center;
-  }
-
-  .loading-detail {
-    color: #94a3b8;
-    font-size: 0.75rem;
-    margin-top: 0.5rem;
-  }
-  
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(59, 130, 246, 0.3);
-    border-top: 4px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
-  }
-  
 </style>
 
-{#if mounted}
 <div class="container">
   <div class="header">
     {#if signedInTeam}
@@ -782,20 +637,7 @@
   </div>
   
 
-  {#if loading}
-    <div class="loading-container">
-      <div class="loading-spinner">
-        <div class="spinner"></div>
-        <div class="loading-text">Loading teams...</div>
-      </div>
-    </div>
-  {:else if error}
-    <div class="error-container">
-      <h2>Error Loading Teams</h2>
-      <p>{error}</p>
-      <button on:click={() => window.location.reload()}>Retry</button>
-    </div>
-  {:else if teams && teams.length > 0}
+  {#if teams && teams.length > 0}
     <div class="teams-grid">
       {#each teams as team}
         <button class="team-card" on:click={() => handleTeamClick(team)}>
@@ -819,8 +661,7 @@
     </div>
   {:else}
     <div class="no-teams">
-      <p>No teams found. The API server may not be running.</p>
-      <button on:click={() => window.location.reload()}>Retry</button>
+      <p>No teams found. Make sure the FastAPI server is running on localhost:8000</p>
     </div>
   {/if}
   
@@ -862,16 +703,16 @@
           </div>
         </div>
 
-        {#if contacts && selectedTeam && contacts[selectedTeam.id]}
+        {#if contacts[selectedTeam.id]}
           <div class="form-group">
             <div class="form-label">
               Code will be sent to:
             </div>
             <div style="color: #06b6d4; font-weight: 500;">
               {#if authMethod === 'email'}
-                {contacts[selectedTeam.id]?.email || 'Email not available'}
+                {contacts[selectedTeam.id].email}
               {:else}
-                {contacts[selectedTeam.id]?.phone || 'Phone not available'}
+                {contacts[selectedTeam.id].phone}
               {/if}
             </div>
           </div>
@@ -901,11 +742,6 @@
           </div>
         </div>
 
-        {#if verificationCode}
-          <div class="dev-code">
-            Dev Code: {verificationCode}
-          </div>
-        {/if}
 
         <div class="form-group">
           <div class="form-label">Verification Code:</div>
@@ -949,15 +785,6 @@
       {#if errorMessage}
         <div class="error-message">{errorMessage}</div>
       {/if}
-    </div>
-  </div>
-{/if}
-
-{:else}
-  <div class="loading-state">
-    <div class="loading-spinner">
-      <div class="spinner"></div>
-      <p>Loading application...</p>
     </div>
   </div>
 {/if}

@@ -1,190 +1,119 @@
-# CLAUDE.md - Bids Page
+# API Routes Directory
 
-This file provides guidance to Claude Code (claude.ai/code) when working with the bids page components.
+This directory contains SvelteKit API endpoints that provide backend functionality for the Fantasy Football Bid Tool.
 
-## Overview
+## API Endpoints
 
-The bids page (`/bids`) displays all submitted player bids across the league, sorted by bidder name. It provides comprehensive bid management and viewing functionality with real-time updates via Server-Sent Events (SSE) and API-based persistence.
+### `/api/bids/+server.js`
+- **Purpose**: Bid management and real-time broadcasting
+- **Methods**: GET, POST, DELETE
+- **Features**:
+  - In-memory bid storage for demo purposes
+  - Free agent validation against external API
+  - Server-Sent Events (SSE) broadcasting for real-time updates
+  - CRUD operations with proper error handling
+- **Data Flow**: Validates bids → Stores in memory → Broadcasts to all clients
+- **SSE**: Maintains persistent connections for live bid notifications
 
-## File Structure
+### `/api/bids/[id]/+server.js`
+- **Purpose**: Individual bid operations
+- **Methods**: DELETE
+- **Features**: Specific bid deletion with validation
+- **Authorization**: Team owners can only delete their own bids
 
-- `+page.server.js` - Server-side data loading (teams data for display)
-- `+page.svelte` - Main bids page component with bid display and management
+### `/api/nfl-players/+server.js`
+- **Purpose**: ESPN NFL player database search
+- **Methods**: GET
+- **Features**:
+  - Real-time player search functionality
+  - ESPN API integration for comprehensive player data
+  - Supports both name and team-based searches
+- **Integration**: Powers PlayerSearch component
+- **Data**: Returns player names, teams, positions, and ESPN IDs
 
-## Key Features
+### `/api/player-stats/[playerId]/+server.js`
+- **Purpose**: Historical player statistics retrieval
+- **Methods**: GET
+- **Features**:
+  - Multi-year player statistics
+  - Caching for performance optimization
+  - ESPN API integration for historical data
+- **Usage**: Provides detailed stats for PlayerCard and PlayerModal components
+- **Data**: Returns season-by-season statistical breakdowns
 
-### Authentication Protection
-- Redirects unauthenticated users to home page
-- Validates stored authentication tokens with expiration
-- Maintains user session state throughout the application
+### `/api/send-code/+server.js`
+- **Purpose**: Email and SMS verification code delivery
+- **Methods**: POST
+- **Features**:
+  - Brevo email integration with professional HTML templates
+  - SMS verification via TextBee.dev integration
+  - 6-digit verification code generation
+  - Contact information masking for privacy
+  - Environment-aware logging (development only)
+  - Secure production responses (no code exposure)
+- **Integration**: Powers the authentication system for team sign-in
+- **Security**: Production-ready with no verification code leakage
 
-### Bid Display System
-- **Primary Sort**: Bidder name (alphabetical)
-- **Secondary Sort**: Timestamp (most recent first for same bidder)
-- **Card Layout**: Rich bid information with hover effects
-- **Team Integration**: Links team IDs to team names and contact information
+### `/api/websocket/+server.js`
+- **Purpose**: WebSocket connection management
+- **Methods**: GET (WebSocket upgrade)
+- **Features**:
+  - Real-time bidirectional communication
+  - Fallback for SSE functionality
+  - Connection management and cleanup
+- **Usage**: Provides alternative to SSE for real-time updates
 
-### Data Management
-- **API Storage**: Primary storage via `/api/bids` endpoint with in-memory persistence
-- **Real-time Sync**: Server-Sent Events for live updates across all clients
-- **Free Agent Validation**: Automatic cleanup of bids for players no longer available
-- **Persistence**: Server-based bid storage with automatic cleanup and validation
+## API Architecture Patterns
 
-## Bid Data Structure
+### Authentication & Security
+- **ESPN Cookies**: SWID and ESPN_S2 for private league access
+- **Validation**: Free agent status validation before bid creation
+- **Authorization**: Team-based permissions for bid management
+- **Error Handling**: Comprehensive error responses with proper HTTP status codes
 
-```javascript
-{
-  id: string,              // Unique identifier
-  playerId: number,        // ESPN player ID
-  playerName: string,      // Player display name
-  position: string,        // Player position (QB, RB, WR, etc.)
-  team: string,           // NFL team abbreviation
-  bidder: {
-    teamId: string,       // Fantasy team ID
-    name: string          // Fantasy team name
-  },
-  contract: {
-    years: number,        // Contract length (1-5)
-    salary: number        // Annual salary in millions
-  },
-  timestamp: number       // Unix timestamp of submission
-}
-```
+### Data Integration
+- **External API**: Integration with localhost:8000 for free agent data
+- **ESPN API**: Direct integration for league and player data
+- **Data Transformation**: Converts between API formats as needed
+- **Caching Strategy**: In-memory caching for frequently accessed data
 
-## Component Architecture
+### Real-Time Features
+- **Server-Sent Events**: Primary method for real-time updates
+- **WebSocket Fallback**: Alternative connection method
+- **Broadcasting**: Notifications sent to all connected clients
+- **Connection Management**: Proper cleanup of persistent connections
 
-### State Management
-- `signedInTeam` - Current authenticated user
-- `bids` - Array of all bids from localStorage
-- `teamsMap` - Mapping of team IDs to team names
+### Error Handling
+- **HTTP Status Codes**: Proper REST API status code usage
+- **Validation Errors**: Clear error messages for invalid data
+- **API Failures**: Graceful handling of external API failures
+- **Timeout Management**: Appropriate timeouts for external calls
 
-### Key Functions
+## External Dependencies
 
-#### `loadBids()`
-- Fetches bids from `/api/bids` endpoint
-- Automatically sorts by bidder name, then timestamp
-- Handles API errors gracefully with fallback to empty state
+### Required Services
+- **ESPN Fantasy API**: League and player data
+- **External API Server**: Free agent data (localhost:8000)
+- **Environment Variables**: SWID and ESPN_S2 cookies
 
-#### `createTeamsMap()`
-- Maps team IDs from FastAPI to team names
-- Used for displaying bidder team information
+### API Endpoints Expected
+- `GET /teams` - Team roster data
+- `GET /free-agents` - Available players
+- `GET /free-agents-{position}` - Position-filtered players
+- `GET /playerinfo` - Detailed player information
 
-#### `deleteBid(bidId)`
-- Sends DELETE request to `/api/bids` with query parameters
-- Updates local bid list immediately on success
-- Triggers SSE broadcast to notify other clients of deletion
-- Handles API errors gracefully with user feedback
+## Type Safety & Data Models
 
-#### `canDeleteBid(bid)` (Reactive)
-- Checks if current user can delete a specific bid
-- Reactive function using `$:` syntax for automatic updates
-- Validates user authentication and bid ownership
+### API Response Types
+All API endpoints return data conforming to types defined in `src/models/types.ts`:
+- **Player Interface**: Complete player data structure
+- **Team Interface**: League team information
+- **Bid Interface**: Bidding system data
+- **Historical Stats**: Multi-year player performance
+- **API Error**: Standardized error responses
 
-#### Navigation Functions
-- `navigateToFreeAgents()` - Routes to free agent marketplace
-- `handleSignOut()` - Clears authentication and redirects
-
-#### Real-time Updates
-- `setupRealTimeUpdates()` - Establishes SSE connection
-- `refreshBids()` - Fetches updated bid list from server
-
-### Display Components
-
-#### Bid Cards
-- **Player Info**: Name, position, NFL team
-- **Contract Details**: Years, annual salary, total value
-- **Bidder Info**: Team name, contact email
-- **Timestamp**: Formatted submission date
-- **Delete Button**: Conditional delete functionality for bid owners
-
-#### Empty State
-- Helpful messaging when no bids exist
-- Call-to-action button to browse free agents
-- Encouraging visual design with icons
-
-## Styling Architecture
-
-### Design System
-- **Dark Theme**: Gradient background with glassmorphism cards
-- **Card Hover**: Elevation and border color changes
-- **Responsive Grid**: Adapts to mobile, tablet, and desktop
-- **Color Coding**: Green for contract values, blue for navigation
-
-### Layout Breakpoints
-- **Desktop**: Full feature layout with positioned elements and right-aligned delete buttons
-- **Tablet**: Adjusted grid and simplified layouts
-- **Mobile**: Stacked elements with delete buttons next to user names
-
-### Header Layout Design
-- **Clean Architecture**: Compact user navigation positioned to right of page title
-- **No Team Display**: Removed team name for cleaner appearance  
-- **Desktop Layout**: Absolutely positioned navigation (top: 50%, right: 0)
-- **Mobile Layout**: Stacked navigation above page content
-- **Footer Sign-out**: Sign-out button moved to bottom footer, right-aligned on desktop
-- **Consistent Styling**: Small navigation buttons (0.75rem font, 0.4rem x 0.6rem padding)
-- **Cross-page Navigation**: Links to Free Agents and Home pages
-
-## Integration Points
-
-### Server-Side API (`/api/bids`)
-- **GET**: Fetches all bids with automatic cleanup of invalid entries
-- **POST**: Creates new bids with validation and real-time notifications
-- **DELETE**: Removes bids by ID with proper authorization checks
-
-### Real-time Updates (SSE)
-- Establishes Server-Sent Events connection to `/api/websocket`
-- Automatically refreshes bid list when new bids are submitted
-- Handles connection failures with auto-reconnection
-
-### localStorage Interface
-- Reads bid data written by free-agents page
-- Maintains data consistency across sessions
-- Handles malformed data with error recovery
-
-### Team Data
-- Fetches team information from FastAPI backend
-- Maps team IDs to display names
-- Integrates with contact information from `contacts.js`
-
-### Navigation Flow
-- Bi-directional navigation with free-agents page
-- Maintains authentication state across routes
-- Provides clear user feedback and CTAs
-
-## Error Handling
-
-- **Missing Data**: Graceful handling of empty states
-- **Invalid JSON**: Error recovery for corrupted localStorage
-- **API Failures**: Fallback to empty team data and SSE reconnection
-- **Authentication**: Automatic redirect to login flow and reactive permission checks
-- **Delete Operations**: Clear error logging and user feedback
-
-## Development Guidelines
-
-### Adding New Features
-- Maintain sorting consistency (bidder name primary)
-- Preserve responsive design across breakpoints
-- Follow established card component patterns
-- Use existing color and spacing systems
-
-### Data Modifications
-- Always validate localStorage data structure
-- Maintain backward compatibility with existing bids
-- Handle data migration if structure changes
-- Preserve sorting and filtering logic
-
-### UI/UX Considerations
-- Maintain loading states for data operations
-- Provide clear feedback for user actions
-- Ensure accessibility with proper ARIA labels
-- Test across multiple device sizes
-
-## Future Enhancements
-
-- **Filtering**: Add filters by position, salary range, or bidder
-- **Export**: CSV/PDF export functionality for league management  
-- **Bid Status**: Add pending/accepted/rejected status tracking
-- **Enhanced Notifications**: Toast notifications for bid actions and updates
-- **Analytics**: Bid trends and salary cap analysis
-- **Bulk Actions**: Multi-select delete and bulk bid management
-- **Audit Trail**: Track bid modifications and deletion history
+### Request/Response Validation
+- **Type Guards**: Runtime validation of incoming data
+- **Error Handling**: Typed error responses with proper HTTP status codes
+- **Data Transformation**: Converting between ESPN API format and application models
+- **See `src/models/types.ts`** for complete API data model definitions
