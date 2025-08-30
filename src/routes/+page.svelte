@@ -18,6 +18,9 @@
 
   let signedInTeam = null;
 
+  // Reactive statement to ensure signedInTeam triggers UI updates
+  $: showNavigation = mounted && signedInTeam;
+
   onMount(() => {
     // Check and clear old deployment data, then get current session
     if (browser) {
@@ -26,7 +29,10 @@
         checkAndClearOldAuth();
         
         // Get current signed in team if any
-        signedInTeam = getSignedInTeam();
+        const currentTeam = getSignedInTeam();
+        if (currentTeam) {
+          signedInTeam = currentTeam;
+        }
       } catch (error) {
         console.log('Error in session check:', error);
         signedInTeam = null;
@@ -619,7 +625,7 @@
 
 <div class="container">
   <div class="header">
-    {#if signedInTeam}
+    {#if showNavigation}
       <div class="user-info">
         <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
           Free Agents
@@ -665,7 +671,7 @@
     </div>
   {/if}
   
-  {#if signedInTeam}
+  {#if showNavigation}
     <div class="footer">
       <button class="sign-out-btn" on:click={handleSignOut}>
         Sign Out

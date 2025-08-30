@@ -72,18 +72,65 @@ cd espn-api-0.45.1
 python3 -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload &
 API_PID=$!
 
-# Wait a moment for the API server to start
+# Wait and check if API server is running
+echo "Waiting for API server to start..."
 sleep 3
 
-echo "Starting SvelteKit development server..."
+# Check if FastAPI server is responding
+MAX_RETRIES=10
+RETRY_COUNT=0
+API_READY=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s http://localhost:8000/teams > /dev/null 2>&1; then
+        API_READY=true
+        echo "✓ FastAPI server is running and responding on port 8000"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        echo "Waiting for FastAPI server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+        sleep 2
+    fi
+done
+
+if [ "$API_READY" = false ]; then
+    echo "ERROR: FastAPI server failed to start or is not responding after $MAX_RETRIES attempts"
+    echo "Please check the API server logs above for errors"
+    kill $API_PID 2>/dev/null
+    exit 1
+fi
+
+echo "Building SvelteKit application..."
 cd ..
-npm run dev &
+
+# Give the API server a bit more time to fully initialize
+sleep 2
+
+# Test one more time before building SvelteKit to ensure API is ready
+if curl -s http://127.0.0.1:8000/teams > /dev/null 2>&1; then
+    echo "✓ API server confirmed ready, building SvelteKit..."
+else
+    echo "⚠ API server may still be initializing..."
+fi
+
+# Build the application
+npm run build
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to build SvelteKit application"
+    kill $API_PID 2>/dev/null
+    exit 1
+fi
+
+echo "Starting SvelteKit preview server..."
+npm run preview &
 SVELTE_PID=$!
 
 echo
-echo "Both servers are running..."
+echo "✓ Both servers are running successfully!"
 echo "- ESPN API Server: http://localhost:8000"
-echo "- SvelteKit App: http://localhost:5173"
+echo "- SvelteKit Preview: http://localhost:4173"
+echo
+echo "API Health Check: curl http://localhost:8000/teams"
 echo
 echo "Press Ctrl+C to stop both servers..."
 

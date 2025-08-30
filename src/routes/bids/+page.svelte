@@ -56,7 +56,7 @@
       console.log('SSE connection established for bids page');
     };
     
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'new_bid') {
@@ -68,9 +68,17 @@
         } else if (data.type === 'all_bids_cleared') {
           // Clear all bids when they are cleared server-side
           bids = [];
-          sortedBids = [];
-          revealedIndexes.clear();
-          revealBids = false;
+          hideAllBids();
+        } else if (data.type === 'bid_window_settings_updated') {
+          console.log('Bids page: Received bid window settings update');
+          // Update client-side bid window settings immediately
+          if (data.settings) {
+            const { updateBidWindowSettings } = await import('$lib/bidWindow.js');
+            updateBidWindowSettings(data.settings);
+          }
+          // Refetch bid window status and refresh bids when settings change
+          fetchBidWindowStatus();
+          refreshBids(); // Refresh bids data to trigger reveal/hide logic
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
@@ -167,32 +175,58 @@
     return signedInTeam.id === bid.bidder.teamId;
   };
 
-  function isInRevealWindow() {
-    const now = new Date();
+  // Get bid window status from server
+  let bidWindowStatus = { allowed: true };
+  
+  async function fetchBidWindowStatus() {
+    if (typeof window === 'undefined') return;
     
-    // Create dates in Eastern Time
-    function getEasternTime(date) {
-      return new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    try {
+      console.log('Fetching bid window status...');
+      const response = await fetch('/api/bid-window');
+      if (response.ok) {
+        const newStatus = await response.json();
+        console.log('Received bid window status:', newStatus);
+        bidWindowStatus = newStatus;
+      } else {
+        console.error('Failed to fetch bid window status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching bid window status:', error);
     }
+  }
+  
+  function isInRevealWindow(status = bidWindowStatus) {
+    // Only run on client-side
+    if (typeof window === 'undefined') return false;
     
-    const easternNow = getEasternTime(now);
-    const currentDay = easternNow.getDay(); // Sunday = 0, Monday = 1, ..., Saturday = 6
-    const currentHour = easternNow.getHours();
-    
-    // Calculate which day of the week we are in the Wed 9pm -> Sun 9pm cycle
-    if (currentDay === 3) { // Wednesday
-      // On Wednesday: reveal if it's 9 PM or later
-      return currentHour >= 21;
-    } else if (currentDay === 4 || currentDay === 5 || currentDay === 6) { // Thursday, Friday, Saturday
-      // Thursday through Saturday: always in reveal window
-      return true;
-    } else if (currentDay === 0) { // Sunday
-      // On Sunday: reveal only if it's before 9 PM
-      return currentHour < 21;
-    } else { // Monday (1) or Tuesday (2)
-      // Monday and Tuesday: never in reveal window
+    // Make sure we have a valid bidWindowStatus object with the required property
+    if (!status || typeof status.allowed !== 'boolean') {
+      console.log('Bid window status not ready yet:', status);
       return false;
     }
+    
+    // Reveal bids when bidding window is closed (bids should be hidden when bidding is open)
+    const shouldReveal = !status.allowed;
+    console.log('Bid reveal check:', { 
+      bidWindowAllowed: status.allowed, 
+      shouldReveal: shouldReveal,
+      bidWindowStatus: status,
+      'typeof bidWindowStatus': typeof status,
+      'Object.keys(bidWindowStatus)': Object.keys(status)
+    });
+    return shouldReveal;
+  }
+  
+  // Temporary testing function - you can remove this later
+  function forceReveal() {
+    console.log('FORCE REVEALING BIDS FOR TESTING');
+    triggerRevealAnimation();
+  }
+  
+  // Make it available in browser console for testing
+  if (typeof window !== 'undefined') {
+    window.forceReveal = forceReveal;
   }
 
   let revealBids = false;
@@ -200,86 +234,55 @@
   let revealedIndexes = new Set();
   let revealTimer = null;
   
-  // Initialize reveal state
+  // Simplified reveal state management - make sure it reacts to bidWindowStatus changes
+  $: shouldReveal = isInRevealWindow(bidWindowStatus);
+  
+  // React to bid window status changes
   $: {
-    const shouldReveal = isInRevealWindow();
-    const shouldClearBids = isClearBidsTime();
+    console.log('Bid window reactive check:', {
+      shouldReveal,
+      revealBids,
+      bidWindowStatus,
+      'bidWindowStatus.allowed': bidWindowStatus.allowed
+    });
     
-    if (shouldClearBids) {
-      // Clear all bids at Sunday 9 PM
-      clearAllBids();
-    } else if (shouldReveal && !revealBids) {
+    if (shouldReveal && !revealBids) {
       // Just entered reveal window - trigger animation
+      console.log('Bids: Entering reveal window - triggering animation');
       triggerRevealAnimation();
     } else if (!shouldReveal && revealBids) {
       // Left reveal window - hide bids immediately
-      revealBids = false;
-      revealedIndexes.clear();
-      if (revealTimer) {
-        clearTimeout(revealTimer);
-        revealTimer = null;
+      console.log('Bids: Leaving reveal window - hiding bids');
+      hideAllBids();
+    }
+  }
+
+  // Additional reactive statement to monitor bid window changes for auto-refresh
+  let previousWindowAllowed = null;
+  $: {
+    if (typeof window !== 'undefined' && bidWindowStatus && typeof bidWindowStatus.allowed === 'boolean') {
+      // Check if the window status actually changed (not just an update)
+      if (previousWindowAllowed !== null && previousWindowAllowed !== bidWindowStatus.allowed) {
+        console.log('Bids page: Bid window status changed, refreshing bids data');
+        refreshBids();
       }
-    } else if (shouldReveal) {
-      // Already in reveal window - just update sorting
-      revealBids = true;
-      updateSortedBids();
+      previousWindowAllowed = bidWindowStatus.allowed;
     }
   }
   
-  function isClearBidsTime() {
-    const now = new Date();
-    const easternNow = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    const currentDay = easternNow.getDay();
-    const currentHour = easternNow.getHours();
-    
-    // Clear bids at Sunday 9 PM exactly
-    return currentDay === 0 && currentHour === 21;
+  // Update sorted bids when bids change and we're in reveal mode
+  $: if (revealBids && bids && Array.isArray(bids)) {
+    updateSortedBids();
   }
   
-  async function clearAllBids() {
-    try {
-      // Call API to clear all bids
-      const response = await fetch('/api/bids?clear=all', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        bids = [];
-        sortedBids = [];
-        revealedIndexes.clear();
-        revealBids = false;
-        console.log('All bids cleared for new week');
-      } else {
-        console.error('Failed to clear bids:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error clearing bids:', error);
+  function hideAllBids() {
+    revealBids = false;
+    revealedIndexes.clear();
+    sortedBids = [];
+    if (revealTimer) {
+      clearTimeout(revealTimer);
+      revealTimer = null;
     }
-  }
-  
-  function updateSortedBids() {
-    if (!revealBids) return;
-    
-    // Group bids by player name and sort by total salary within each group
-    const grouped = {};
-    bids.forEach(bid => {
-      const totalSalary = bid.contract.salary * bid.contract.years;
-      if (!grouped[bid.playerName]) {
-        grouped[bid.playerName] = [];
-      }
-      grouped[bid.playerName].push({ ...bid, totalSalary });
-    });
-    
-    // Sort each group by total salary (highest first)
-    Object.keys(grouped).forEach(playerName => {
-      grouped[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
-    });
-    
-    // Flatten back to array, maintaining player groupings
-    sortedBids = Object.values(grouped).flat();
   }
   
   function triggerRevealAnimation() {
@@ -287,18 +290,46 @@
     updateSortedBids();
     revealedIndexes.clear();
     
+    // Clear any existing timer
+    if (revealTimer) {
+      clearTimeout(revealTimer);
+      revealTimer = null;
+    }
+    
     // Stagger the reveal animation
     sortedBids.forEach((_, index) => {
-      setTimeout(() => {
+      revealTimer = setTimeout(() => {
         revealedIndexes.add(index);
         revealedIndexes = new Set(revealedIndexes); // Trigger reactivity
       }, index * 150); // 150ms delay between each reveal
     });
   }
   
-  // Update sorted bids when regular bids change
-  $: if (bids && revealBids) {
-    updateSortedBids();
+  function updateSortedBids() {
+    if (!revealBids && bids && Array.isArray(bids)) {
+      sortedBids = [];
+      return;
+    }
+    
+    // Group bids by player name
+    const playerGroups = {};
+    bids.forEach(bid => {
+      const totalSalary = bid.contract.salary * bid.contract.years;
+      
+      if (!playerGroups[bid.playerName]) {
+        playerGroups[bid.playerName] = [];
+      }
+      
+      playerGroups[bid.playerName].push({ ...bid, totalSalary });
+    });
+    
+    // Sort each player group by total salary (highest first)
+    Object.keys(playerGroups).forEach(playerName => {
+      playerGroups[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
+    });
+    
+    // Flatten back to array, maintaining player groupings
+    sortedBids = Object.values(playerGroups).flat();
   }
 
 </script>
@@ -459,16 +490,11 @@
   }
 
   .player-group-header {
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    margin: 1rem 0 0.5rem 0;
     font-weight: 600;
     color: #3b82f6;
     font-size: 0.9rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
   }
 
   .bid-card:hover {
@@ -783,7 +809,7 @@
           <div class="bid-item">
             <div class="user-name-row">
               <div class="item-value user-name">{bid.bidder.name}</div>
-              {#if canDeleteBid(bid)}
+              {#if canDeleteBid(bid) && !revealBids}
                 <button class="delete-btn" on:click={() => deleteBid(bid.id)} title="Delete bid">X</button>
               {/if}
             </div>
@@ -791,7 +817,10 @@
           
           <!-- Player Name -->
           <div class="bid-item">
-            {#if canDeleteBid(bid) || revealBids}
+            {#if revealBids}
+            <div class="player-position">{bid.position} • {bid.team}</div>
+            <div class="item-value player-name">{bid.playerName}</div>
+            {:else if canDeleteBid(bid)}
             <div class="player-position">{bid.position} • {bid.team}</div>
             <div class="item-value player-name">{bid.playerName}</div>
             {:else}
@@ -804,7 +833,13 @@
           <div class="bid-item contract-row">
             <div class="item-label">Contract</div>
             <div class="contract-details">
-              {#if canDeleteBid(bid) || revealBids}
+              {#if revealBids}
+              <span class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</span>
+              <span class="contract-separator">•</span>
+              <span class="item-value salary-value">{formatCurrency(bid.contract.salary)}/yr</span>
+              <span class="contract-separator">•</span>
+              <span class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)} total</span>
+              {:else if canDeleteBid(bid)}
               <span class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</span>
               <span class="contract-separator">•</span>
               <span class="item-value salary-value">{formatCurrency(bid.contract.salary)}/yr</span>
@@ -823,7 +858,9 @@
           <!-- Individual items for desktop (hidden on mobile) -->
           <div class="bid-item desktop-only">
             <div class="item-label">Contract</div>
-            {#if canDeleteBid(bid) || revealBids}
+            {#if revealBids}
+            <div class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</div>
+            {:else if canDeleteBid(bid)}
             <div class="item-value contract-years">{bid.contract.years} yr{bid.contract.years > 1 ? 's' : ''}</div>
             {:else}
             <div class="item-value contract-years"># yrs</div>
@@ -832,7 +869,9 @@
           
           <div class="bid-item desktop-only">
             <div class="item-label">Annual</div>
-            {#if canDeleteBid(bid) || revealBids}
+            {#if revealBids}
+            <div class="item-value salary-value">{formatCurrency(bid.contract.salary)}</div>
+            {:else if canDeleteBid(bid)}
             <div class="item-value salary-value">{formatCurrency(bid.contract.salary)}</div>
             {:else}
             <div class="item-value salary-value">$</div>
@@ -841,7 +880,9 @@
           
           <div class="bid-item desktop-only">
             <div class="item-label">Total</div>
-            {#if canDeleteBid(bid) || revealBids}
+            {#if revealBids}
+            <div class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)}</div>
+            {:else if canDeleteBid(bid)}
             <div class="item-value total-value">{formatCurrency(bid.contract.salary * bid.contract.years)}</div>
             {:else}
             <div class="item-value total-value">&lt;---&gt;</div>
@@ -855,7 +896,7 @@
           </div>
 
           <!-- Delete Button (Desktop Only) -->
-          {#if canDeleteBid(bid)}
+          {#if canDeleteBid(bid) && !revealBids}
             <div class="bid-item desktop-delete">
               <button class="delete-btn" on:click={() => deleteBid(bid.id)} title="Delete bid">×</button>
             </div>

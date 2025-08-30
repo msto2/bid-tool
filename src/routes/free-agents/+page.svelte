@@ -91,13 +91,22 @@
       console.log('SSE connection established');
     };
     
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'new_bid' && data.message) {
           if (!data.message.includes(signedInTeam.name)) {
             addNotification(data.message);
           }
+        } else if (data.type === 'bid_window_settings_updated') {
+          console.log('Free agents page: Received bid window settings update');
+          // Update client-side bid window settings immediately
+          if (data.settings) {
+            const { updateBidWindowSettings } = await import('$lib/bidWindow.js');
+            updateBidWindowSettings(data.settings);
+          }
+          // The BidWindowStatus component will automatically refresh itself
+          // No additional action needed here as bidding functionality is handled by BidWindowStatus
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
