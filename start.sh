@@ -118,26 +118,35 @@ if [ "$API_READY" = false ]; then
     exit 1
 fi
 
-echo "Starting SvelteKit development server..."
+echo "Building SvelteKit application..."
 cd ..
 
 # Give the API server a bit more time to fully initialize
 sleep 2
 
-# Test one more time before starting SvelteKit to ensure API is ready
+# Test one more time before building SvelteKit to ensure API is ready
 if curl -s http://127.0.0.1:8000/teams > /dev/null 2>&1; then
-    echo "✓ API server confirmed ready, starting SvelteKit..."
+    echo "✓ API server confirmed ready, building SvelteKit..."
 else
     echo "⚠ API server may still be initializing..."
 fi
 
-npm run dev &
+# Build the application
+npm run build
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to build SvelteKit application"
+    kill $API_PID 2>/dev/null
+    exit 1
+fi
+
+echo "Starting SvelteKit preview server..."
+npm run preview &
 SVELTE_PID=$!
 
 echo
 echo "✓ Both servers are running successfully!"
 echo "- ESPN API Server: http://localhost:8000"
-echo "- SvelteKit App: http://localhost:5173"
+echo "- SvelteKit Preview: http://localhost:4173"
 echo
 echo "API Health Check: curl http://localhost:8000/teams"
 echo

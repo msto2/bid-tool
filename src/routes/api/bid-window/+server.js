@@ -1,18 +1,17 @@
 import { json } from '@sveltejs/kit';
-import { getBidWindowStatusServer, getTimeUntilWindowChangeServer } from '$lib/server/bidWindow.js';
-import { loadBidWindowSettingsFromFile } from '$lib/server/bidWindowStorage.js';
+import { getBiddingWindowStatus, getTimeUntilWindowChange, getBidWindowSettings } from '$lib/server/bidWindow.js';
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET() {
 	try {
-		// Get status using server-side settings
-		const status = getBidWindowStatusServer();
+		// Get status using unified bidWindow system
+		const status = getBiddingWindowStatus();
 		
 		// Load settings to pass to client-side time calculation
-		const settings = loadBidWindowSettingsFromFile();
+		const settings = getBidWindowSettings();
 		
-		// Calculate time until window change (server-side)
-		const timeUntilChange = getTimeUntilWindowChangeServer(status, settings);
+		// Calculate time until window change
+		const timeUntilChange = getTimeUntilWindowChange();
 		
 		// Return complete status with countdown
 		return json({

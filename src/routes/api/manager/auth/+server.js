@@ -22,7 +22,7 @@ function maskEmail(email) {
 
 async function sendManagerEmailCode(email, code) {
   // Log the code in development only
-  if (dev) {
+  if (devConfig) {
     console.log(`📧 Manager verification code for ${email}: ${code}`);
   }
   

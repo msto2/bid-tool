@@ -1,16 +1,52 @@
 /**
- * Bid window utilities for managing when bids can be submitted
+ * Client-side bid window utilities for managing when bids can be submitted
  * Bids are not allowed between Wednesday 9 PM and Sunday 9 PM (default)
  * Can be customized via manager settings
  */
 
 // Default settings (can be overridden by manager)
-let bidWindowSettings = {
+const DEFAULT_SETTINGS = {
   closeDay: 3, // Wednesday (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
   closeHour: 21, // 9 PM
   openDay: 0, // Sunday
   openHour: 21 // 9 PM
 };
+
+// In-memory settings cache
+let bidWindowSettings = { ...DEFAULT_SETTINGS };
+
+/**
+ * Load settings from localStorage (client-side only)
+ */
+function loadSettings() {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('bidWindowSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        bidWindowSettings = { ...DEFAULT_SETTINGS, ...parsed };
+      }
+    } catch (error) {
+      console.error('Error loading bid window settings from localStorage:', error);
+    }
+  }
+}
+
+/**
+ * Save settings to localStorage (client-side only)
+ */
+function saveSettings(settings) {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('bidWindowSettings', JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving bid window settings to localStorage:', error);
+    }
+  }
+}
+
+// Initialize settings on module load
+loadSettings();
 
 /**
  * Get current bid window settings
@@ -26,35 +62,19 @@ export function getBidWindowSettings() {
  */
 export function updateBidWindowSettings(newSettings) {
   bidWindowSettings = { ...bidWindowSettings, ...newSettings };
-  
-  // Save to localStorage for persistence
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('bidWindowSettings', JSON.stringify(bidWindowSettings));
-  }
+  saveSettings(bidWindowSettings);
 }
 
 /**
- * Load bid window settings from localStorage
+ * Load bid window settings (refresh from storage)
  */
 export function loadBidWindowSettings() {
-  if (typeof localStorage !== 'undefined') {
-    try {
-      const saved = localStorage.getItem('bidWindowSettings');
-      if (saved) {
-        bidWindowSettings = { ...bidWindowSettings, ...JSON.parse(saved) };
-      }
-    } catch (error) {
-      console.error('Error loading bid window settings:', error);
-    }
-  }
+  loadSettings();
 }
-
-// Load settings on module initialization
-loadBidWindowSettings();
 
 /**
  * Check if bidding is currently allowed
- * @returns {Object} { allowed: boolean, reason: string, nextWindow: Date|null }
+ * @returns {Object} { allowed: boolean, reason: string, nextWindow: Date|null, currentTime: Date }
  */
 export function isBiddingAllowed() {
   const now = new Date();
@@ -280,7 +300,6 @@ export function getBiddingWindowStatus() {
 export function getTimeUntilWindowChange() {
   const status = isBiddingAllowed();
   const now = new Date();
-  const { closeDay, closeHour } = bidWindowSettings;
   
   let targetTime;
   let changeType;
@@ -301,6 +320,24 @@ export function getTimeUntilWindowChange() {
   const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+  
+  // Show seconds when under 2 minutes (120 seconds)
+  const totalSeconds = Math.floor(timeDiff / 1000);
+  const showSeconds = totalSeconds <= 120 && totalSeconds > 0;
+  
+  let formattedTime;
+  if (showSeconds) {
+    // Under 2 minutes - show minutes and seconds
+    if (minutes > 0) {
+      formattedTime = `${minutes}m ${seconds}s`;
+    } else {
+      formattedTime = `${seconds}s`;
+    }
+  } else {
+    // Over 2 minutes - show regular format
+    formattedTime = `${days > 0 ? `${days}d ` : ''}${hours}h ${minutes}m`;
+  }
   
   return {
     changeType,
@@ -308,7 +345,10 @@ export function getTimeUntilWindowChange() {
     days,
     hours,
     minutes,
+    seconds,
     totalMinutes: Math.floor(timeDiff / (1000 * 60)),
-    formattedTime: `${days > 0 ? `${days}d ` : ''}${hours}h ${minutes}m`
+    totalSeconds,
+    showSeconds,
+    formattedTime
   };
 }

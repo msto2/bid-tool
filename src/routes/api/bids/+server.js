@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { broadcastToSSEClients } from '$lib/sse.js';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import path from 'path';
-import { isBiddingAllowedServer, getCurrentBidPeriodServer } from '$lib/server/bidWindow.js';
+import { isBiddingAllowed, getCurrentBidPeriod } from '$lib/server/bidWindow.js';
 
 // File path for persistent bid storage
 const BIDS_FILE_PATH = path.join(process.cwd(), 'bids.json');
@@ -173,7 +173,7 @@ export async function GET() {
 export async function POST({ request }) {
 	try {
 		// Check if bidding is currently allowed using server-side settings
-		const biddingStatus = isBiddingAllowedServer();
+		const biddingStatus = isBiddingAllowed();
 		if (!biddingStatus.allowed) {
 			return json({ 
 				error: 'Bidding is currently closed', 
@@ -206,7 +206,7 @@ export async function POST({ request }) {
 		}
 
 		// Add bid period information
-		bid.periodId = getCurrentBidPeriodServer();
+		bid.periodId = getCurrentBidPeriod();
 		
 		// Find and remove any existing bid from same bidder for same player IN THE SAME PERIOD
 		bidsStorage = bidsStorage.filter(existingBid => 

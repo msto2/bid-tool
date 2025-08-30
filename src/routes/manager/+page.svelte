@@ -42,13 +42,13 @@ import { devConfig } from '$lib/devMode.js';
       // If not authenticated, check if the signed-in user is the manager
       if (!authenticated) {
         const signedInUser = getSignedInTeam();
-        if (signedInUser) {
+        if (signedInUser && data?.contacts) {
           // Check if the signed-in user's team has the manager email in contacts
-          const managerEmail = 'michael.stokes.212@gmail.com';
+          const managerEmail = data.managerEmail;
+          const userContact = data.contacts?.[signedInUser.id];
           
-          // For now, we'll check if the team ID corresponds to the manager
-          // You may need to adjust this logic based on how you determine which team belongs to the manager
-          if (data?.contacts && data.contacts[signedInUser.id]?.email === managerEmail) {
+          // Check if the signed-in user's email matches the manager email
+          if (userContact?.email === managerEmail) {
             // Auto-authenticate the manager
             if (setManagerSession(managerEmail)) {
               authenticated = true;

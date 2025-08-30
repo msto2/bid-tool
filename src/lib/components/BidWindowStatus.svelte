@@ -9,6 +9,7 @@
   let error = null;
   let interval;
   let eventSource = null;
+  let updateInterval = 60000; // Default 60 seconds
   
   async function fetchStatus() {
     try {
@@ -21,6 +22,17 @@
           // Update client-side bid window settings
           const { updateBidWindowSettings } = await import('$lib/bidWindow.js');
           updateBidWindowSettings(status.settings);
+        }
+        
+        // Adjust update frequency based on whether seconds are shown
+        const newInterval = (status.timeUntilChange && status.timeUntilChange.showSeconds) ? 1000 : 60000;
+        if (newInterval !== updateInterval) {
+          updateInterval = newInterval;
+          // Restart interval with new frequency
+          if (interval) {
+            clearInterval(interval);
+            interval = setInterval(fetchStatus, updateInterval);
+          }
         }
         
         error = null;
@@ -37,8 +49,8 @@
   onMount(() => {
     fetchStatus();
     
-    // Update every minute
-    interval = setInterval(fetchStatus, 60000);
+    // Start with default interval, will be adjusted dynamically in fetchStatus
+    interval = setInterval(fetchStatus, updateInterval);
     
     // Set up real-time updates for settings changes
     setupRealTimeUpdates();
@@ -53,12 +65,17 @@
       console.log('BidWindowStatus: SSE connection established');
     };
     
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
         
         if (data.type === 'bid_window_settings_updated') {
           console.log('BidWindowStatus: Received settings update, refreshing status');
+          // Update client-side bid window settings immediately
+          if (data.settings) {
+            const { updateBidWindowSettings } = await import('$lib/bidWindow.js');
+            updateBidWindowSettings(data.settings);
+          }
           // Immediately refresh the status when settings change
           fetchStatus();
         }

@@ -8,7 +8,7 @@ import { loadBidWindowSettingsFromFile } from './bidWindowStorage.js';
  * Check if bidding is currently allowed (server-side)
  * @returns {Object} { allowed: boolean, reason: string, nextWindow: Date|null }
  */
-export function isBiddingAllowedServer() {
+export function isBiddingAllowed() {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   const hour = now.getHours();
@@ -57,11 +57,11 @@ export function isBiddingAllowedServer() {
   if (dayOfWeek === closeDay && hour >= closeHour) {
     // Close day at close hour or later
     biddingClosed = true;
-    reason = `Bidding closes ${closeDayName} at ${formatHour(closeHour)}`;
-    nextWindow = getNextBiddingWindowServer();
-  } else if (isInClosedPeriodServer(dayOfWeek, hour)) {
+    reason = `Bidding closed ${closeDayName} at ${formatHour(closeHour)}`;
+    nextWindow = getNextBiddingWindow();
+  } else if (isInClosedPeriod(dayOfWeek, hour)) {
     biddingClosed = true;
-    const nextOpenTime = getNextBiddingWindowServer();
+    const nextOpenTime = getNextBiddingWindow();
     reason = `Bidding is closed until ${formatDateTime(nextOpenTime)}`;
     nextWindow = nextOpenTime;
   }
@@ -69,7 +69,7 @@ export function isBiddingAllowedServer() {
   // Calculate the open period information
   let openPeriodInfo = '';
   if (!biddingClosed) {
-    const nextCloseTime = getNextCloseTimeServer();
+    const nextCloseTime = getNextCloseTime();
     
     if (nextCloseTime) {
       openPeriodInfo = `Bidding is open until ${formatDateTime(nextCloseTime)}`;
@@ -93,7 +93,7 @@ export function isBiddingAllowedServer() {
  * @param {number} hour - Current hour
  * @returns {boolean} True if in closed period
  */
-function isInClosedPeriodServer(dayOfWeek, hour) {
+function isInClosedPeriod(dayOfWeek, hour) {
   const settings = loadBidWindowSettingsFromFile();
   const { closeDay, closeHour, openDay, openHour } = settings;
   
@@ -128,7 +128,7 @@ function isInClosedPeriodServer(dayOfWeek, hour) {
  * Get the next time when bidding will be allowed (server-side)
  * @returns {Date} Next bidding window opening time
  */
-function getNextBiddingWindowServer() {
+function getNextBiddingWindow() {
   const now = new Date();
   const dayOfWeek = now.getDay();
   const hour = now.getHours();
@@ -167,7 +167,7 @@ function getNextBiddingWindowServer() {
  * Get the next time when bidding will close (server-side)
  * @returns {Date} Next bidding window closing time
  */
-function getNextCloseTimeServer() {
+function getNextCloseTime() {
   const now = new Date();
   const dayOfWeek = now.getDay();
   const hour = now.getHours();
@@ -207,13 +207,13 @@ function getNextCloseTimeServer() {
  * A bid period runs from open time to close time
  * @returns {string} Period identifier (YYYY-MM-DD format of the period start)
  */
-export function getCurrentBidPeriodServer() {
+export function getCurrentBidPeriod() {
   const now = new Date();
   const settings = loadBidWindowSettingsFromFile();
-  const { openDay, openHour, closeDay, closeHour } = settings;
+  const { openDay, openHour } = settings;
   
   // Find the start of the current bid period
-  const periodStart = getCurrentPeriodStartServer(now);
+  const periodStart = getCurrentPeriodStart(now);
   
   // Format as YYYY-MM-DD for the period identifier
   const year = periodStart.getFullYear();
@@ -228,7 +228,7 @@ export function getCurrentBidPeriodServer() {
  * @param {Date} currentDate - Current date
  * @returns {Date} Start of current bid period
  */
-function getCurrentPeriodStartServer(currentDate = new Date()) {
+function getCurrentPeriodStart(currentDate = new Date()) {
   const settings = loadBidWindowSettingsFromFile();
   const { openDay, openHour } = settings;
   
@@ -266,11 +266,11 @@ function getCurrentPeriodStartServer(currentDate = new Date()) {
  * Get the current bid period range (start and end times)
  * @returns {Object} { start: Date, end: Date, periodId: string }
  */
-export function getCurrentBidPeriodRangeServer() {
+export function getCurrentBidPeriodRange() {
   const settings = loadBidWindowSettingsFromFile();
   const { openDay, openHour, closeDay, closeHour } = settings;
   
-  const periodStart = getCurrentPeriodStartServer();
+  const periodStart = getCurrentPeriodStart();
   
   // Calculate the end of this period
   const periodEnd = new Date(periodStart);
@@ -286,26 +286,24 @@ export function getCurrentBidPeriodRangeServer() {
   return {
     start: periodStart,
     end: periodEnd,
-    periodId: getCurrentBidPeriodServer()
+    periodId: getCurrentBidPeriod()
   };
 }
 
 /**
  * Get time remaining until next bidding window change (server-side)
- * @param {Object} status - Current bidding status
- * @param {Object} settings - Bid window settings
  * @returns {Object} Time remaining information
  */
-export function getTimeUntilWindowChangeServer(status, settings) {
+export function getTimeUntilWindowChange() {
+  const status = isBiddingAllowed();
   const now = new Date();
-  const { closeDay, closeHour } = settings;
   
   let targetTime;
   let changeType;
   
   if (status.allowed) {
     // Bidding is open - find when it closes
-    targetTime = getNextCloseTimeServer();
+    targetTime = getNextCloseTime();
     changeType = 'closes';
   } else {
     // Bidding is closed - use the next window opening time
@@ -319,6 +317,24 @@ export function getTimeUntilWindowChangeServer(status, settings) {
   const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+  
+  // Show seconds when under 2 minutes (120 seconds)
+  const totalSeconds = Math.floor(timeDiff / 1000);
+  const showSeconds = totalSeconds <= 120 && totalSeconds > 0;
+  
+  let formattedTime;
+  if (showSeconds) {
+    // Under 2 minutes - show minutes and seconds
+    if (minutes > 0) {
+      formattedTime = `${minutes}m ${seconds}s`;
+    } else {
+      formattedTime = `${seconds}s`;
+    }
+  } else {
+    // Over 2 minutes - show regular format
+    formattedTime = `${days > 0 ? `${days}d ` : ''}${hours}h ${minutes}m`;
+  }
   
   return {
     changeType,
@@ -326,8 +342,11 @@ export function getTimeUntilWindowChangeServer(status, settings) {
     days,
     hours,
     minutes,
+    seconds,
     totalMinutes: Math.floor(timeDiff / (1000 * 60)),
-    formattedTime: `${days > 0 ? `${days}d ` : ''}${hours}h ${minutes}m`
+    totalSeconds,
+    showSeconds,
+    formattedTime
   };
 }
 
@@ -335,9 +354,9 @@ export function getTimeUntilWindowChangeServer(status, settings) {
  * Get a human-readable status of the current bidding window (server-side)
  * @returns {Object} Status information with formatted strings
  */
-export function getBidWindowStatusServer() {
-  const status = isBiddingAllowedServer();
-  const periodRange = getCurrentBidPeriodRangeServer();
+export function getBiddingWindowStatus() {
+  const status = isBiddingAllowed();
+  const periodRange = getCurrentBidPeriodRange();
   
   const formatTime = (date) => {
     if (!date) return '';
@@ -389,4 +408,12 @@ export function getBidWindowStatusServer() {
     periodId: periodRange.periodId,
     periodRange
   };
+}
+
+/**
+ * Get current bid window settings (server-side)
+ * @returns {Object} Current settings
+ */
+export function getBidWindowSettings() {
+  return loadBidWindowSettingsFromFile();
 }

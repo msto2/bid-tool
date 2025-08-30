@@ -25,7 +25,25 @@
     return Object.values(grouped);
   }
   
+  // Group bids by user/team for easier viewing
+  function groupBidsByUser(bids) {
+    const grouped = {};
+    bids.forEach(bid => {
+      const userId = bid.bidder.teamId || bid.bidder.name;
+      if (!grouped[userId]) {
+        grouped[userId] = {
+          userName: bid.bidder.name,
+          teamId: bid.bidder.teamId,
+          bids: []
+        };
+      }
+      grouped[userId].bids.push(bid);
+    });
+    return Object.values(grouped);
+  }
+  
   $: groupedBids = groupBidsByPlayer(data.bids);
+  $: userGroupedBids = groupBidsByUser(data.bids);
 </script>
 
 <svelte:head>
@@ -125,6 +143,36 @@
                     <div class="mini-bid-card">
                       <div class="mini-bid-info">
                         <span class="bidder-name">{bid.bidder.name}</span>
+                        <span class="contract-info">{formatContract(bid.contract)}</span>
+                      </div>
+                      <div class="mini-bid-time">
+                        {formatDate(bid.timestamp)}
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div class="grouped-section">
+          <h2>By User ({userGroupedBids.length} teams)</h2>
+          
+          <div class="users-grid">
+            {#each userGroupedBids as userGroup}
+              <div class="user-group">
+                <h3 class="user-group-title">
+                  {userGroup.userName}
+                  <span class="bid-count">({userGroup.bids.length} bid{userGroup.bids.length !== 1 ? 's' : ''})</span>
+                </h3>
+                
+                <div class="user-bids">
+                  {#each userGroup.bids as bid (bid.id)}
+                    <div class="mini-bid-card">
+                      <div class="mini-bid-info">
+                        <span class="player-name-mini">{bid.playerName}</span>
+                        <span class="player-position-mini">{bid.position || 'N/A'}</span>
                         <span class="contract-info">{formatContract(bid.contract)}</span>
                       </div>
                       <div class="mini-bid-time">
@@ -368,13 +416,13 @@
     font-weight: 600;
   }
 
-  .players-grid {
+  .players-grid, .users-grid {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   }
 
-  .player-group {
+  .player-group, .user-group {
     background: rgba(30, 41, 59, 0.4);
     border: 1px solid rgba(59, 130, 246, 0.15);
     border-radius: 0.75rem;
@@ -382,9 +430,22 @@
     backdrop-filter: blur(10px);
   }
 
+  .user-group {
+    border-color: rgba(16, 185, 129, 0.15);
+  }
+
   .player-group-title {
     font-size: 1.1rem;
     color: #34d399;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .user-group-title {
+    font-size: 1.1rem;
+    color: #06b6d4;
     margin: 0 0 1rem 0;
     display: flex;
     align-items: center;
@@ -397,7 +458,7 @@
     font-weight: normal;
   }
 
-  .player-bids {
+  .player-bids, .user-bids {
     display: grid;
     gap: 0.75rem;
   }
@@ -429,6 +490,21 @@
     color: #94a3b8;
   }
 
+  .player-name-mini {
+    font-size: 0.875rem;
+    color: #34d399;
+    font-weight: 500;
+  }
+
+  .player-position-mini {
+    font-size: 0.675rem;
+    color: #94a3b8;
+    background: rgba(52, 211, 153, 0.1);
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    margin-left: 0.5rem;
+  }
+
   .mini-bid-time {
     font-size: 0.75rem;
     color: #64748b;
@@ -445,7 +521,7 @@
       gap: 1rem;
     }
     
-    .bids-grid, .players-grid {
+    .bids-grid, .players-grid, .users-grid {
       grid-template-columns: 1fr;
     }
     

@@ -29,7 +29,7 @@ function maskPhone(phone) {
 
 async function sendEmailCode(email, code) {
   // Log the code in development only
-  if (dev) {
+  if (devConfig) {
     console.log(`📧 Email verification code for ${email}: ${code}`);
   }
   
@@ -69,7 +69,7 @@ async function sendEmailCode(email, code) {
 
 async function sendSMSCode(phone, code) {
   // Log the code in development only
-  if (dev) {
+  if (devConfig) {
     console.log(`📱 SMS verification code for ${phone}: ${code}`);
   }
   
