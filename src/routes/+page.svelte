@@ -17,6 +17,7 @@
   let errorMessage = '';
 
   let signedInTeam = null;
+  let mounted = false;
 
   // Reactive statement to ensure signedInTeam triggers UI updates
   $: showNavigation = mounted && signedInTeam;
@@ -38,6 +39,8 @@
         signedInTeam = null;
       }
     }
+    
+    mounted = true;
   });
 
   function handleTeamClick(team) {
