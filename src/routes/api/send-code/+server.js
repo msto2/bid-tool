@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { TransactionalEmailsApi, SendSmtpEmail } from '@getbrevo/brevo';
 import { BREVO_API_KEY, TEXTBEE_API_KEY, TEXTBEE_DEVICE_ID, CONTACTS } from '$env/static/private';
 import { dev } from '$app/environment';
+import { devConfig } from '$lib/devMode.js';
 
 // Initialize Brevo API
 const emailApi = new TransactionalEmailsApi();
@@ -28,8 +29,14 @@ function maskPhone(phone) {
 
 async function sendEmailCode(email, code) {
   // Log the code in development only
-  if (devConfig) {
+  if (devConfig.showVerificationCodes) {
     console.log(`📧 Email verification code for ${email}: ${code}`);
+  }
+  
+  // Skip actual email sending in dev mode
+  if (devConfig.skipEmailSending) {
+    console.log('🔧 Dev mode: Skipping email sending, code logged above');
+    return true;
   }
   
   try {
@@ -62,8 +69,14 @@ async function sendEmailCode(email, code) {
 
 async function sendSMSCode(phone, code) {
   // Log the code in development only
-  if (devConfig) {
+  if (devConfig.showVerificationCodes) {
     console.log(`📱 SMS verification code for ${phone}: ${code}`);
+  }
+  
+  // Skip actual SMS sending in dev mode
+  if (devConfig.skipEmailSending) {
+    console.log('🔧 Dev mode: Skipping SMS sending, code logged above');
+    return true;
   }
   
   try {
@@ -124,13 +137,9 @@ export async function POST({ request }) {
       const response = {
         success: true,
         message: `Verification code sent via ${method}`,
-        maskedContact: method === 'email' ? maskEmail(email) : maskPhone(phone)
+        maskedContact: method === 'email' ? maskEmail(email) : maskPhone(phone),
+        code: code // Always include code for frontend validation
       };
-      
-      // Only include code in development mode
-      if (dev) {
-        response.code = code;
-      }
       
       return json(response);
     } catch (error) {

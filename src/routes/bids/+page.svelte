@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { checkAndClearOldAuth, getSignedInTeam } from '$lib/simple-auth-reset.js';
+  import BidWindowStatus from '$lib/components/BidWindowStatus.svelte';
 
   export let data;
   const { teams, contacts } = data;
@@ -770,6 +771,11 @@
       <h1 class="main-title">Submitted Bids</h1>
       <p class="subtitle">Track all player bids across the league</p>
     </div>
+  </div>
+
+  <!-- Bid Window Status -->
+  <div style="margin-bottom: 1.5rem;">
+    <BidWindowStatus compact={false} />
   </div>
 
   <div class="actions-bar">

@@ -88,7 +88,9 @@
       const result = await response.json();
 
       if (response.ok) {
+        console.log('API Response:', result); // Debug: see what we got
         verificationCode = result.code; // In development, show the code
+        console.log('Verification code set to:', verificationCode); // Debug: see if code was set
         signInStep = 'code';
       } else {
         errorMessage = result.error || 'Failed to send verification code';
@@ -101,6 +103,11 @@
   }
 
   async function verifyCode() {
+    console.log('Verifying code:'); // Debug
+    console.log('  Input code:', inputCode); // Debug  
+    console.log('  Expected code:', verificationCode); // Debug
+    console.log('  Codes match:', inputCode === verificationCode); // Debug
+    
     if (inputCode !== verificationCode) {
       errorMessage = 'Invalid verification code';
       return;

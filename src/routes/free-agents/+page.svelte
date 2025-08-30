@@ -5,6 +5,7 @@
   import { page } from '$app/stores';
   import PositionFilter from '$lib/components/PositionFilter.svelte';
   import PlayerCard from '$lib/components/PlayerCard.svelte';
+  import BidWindowStatus from '$lib/components/BidWindowStatus.svelte';
   import { checkAndClearOldAuth, getSignedInTeam } from '$lib/simple-auth-reset.js';
 
   export let data;
@@ -519,6 +520,11 @@
       <h1 class="main-title">Free Agent Market</h1>
       <p class="subtitle">Discover top available talent for your fantasy roster</p>
     </div>
+  </div>
+
+  <!-- Bid Window Status -->
+  <div style="margin-bottom: 1.5rem;">
+    <BidWindowStatus compact={false} />
   </div>
 
   <PositionFilter 

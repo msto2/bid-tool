@@ -12,7 +12,8 @@ import { devConfig } from '$lib/devMode.js';
   
   let authenticated = false;
   let email = '';
-  let verificationCode = '';
+  let verificationCode = ''; // The code we receive from the API
+  let inputVerificationCode = ''; // The code the user enters
   let showVerification = false;
   let loading = false;
   let error = '';
@@ -42,13 +43,20 @@ import { devConfig } from '$lib/devMode.js';
       // If not authenticated, check if the signed-in user is the manager
       if (!authenticated) {
         const signedInUser = getSignedInTeam();
+        console.log('Checking signed-in user:', signedInUser); // Debug
+        console.log('Manager email:', data.managerEmail); // Debug
+        console.log('Contacts data:', data.contacts); // Debug
+        
         if (signedInUser && data?.contacts) {
           // Check if the signed-in user's team has the manager email in contacts
           const managerEmail = data.managerEmail;
-          const userContact = data.contacts?.[signedInUser.id];
+          const userContact = data.contacts[signedInUser.id];
+          
+          console.log('User contact for team', signedInUser.id, ':', userContact); // Debug
           
           // Check if the signed-in user's email matches the manager email
           if (userContact?.email === managerEmail) {
+            console.log('Manager email matches! Auto-authenticating...'); // Debug
             // Auto-authenticate the manager
             if (setManagerSession(managerEmail)) {
               authenticated = true;
@@ -56,7 +64,11 @@ import { devConfig } from '$lib/devMode.js';
               success = 'Automatically authenticated as manager';
               setTimeout(() => { success = ''; }, 3000);
             }
+          } else {
+            console.log('Email mismatch:', userContact?.email, 'vs', managerEmail); // Debug
           }
+        } else {
+          console.log('Missing signed-in user or contacts data'); // Debug
         }
       }
       
@@ -84,7 +96,13 @@ import { devConfig } from '$lib/devMode.js';
       console.error('Error loading settings from server:', err);
       // Fallback to client-side settings
       loadBidWindowSettings();
-      settings = getBidWindowSettings();
+      const loadedSettings = getBidWindowSettings();
+      settings = {
+        closeDay: loadedSettings.closeDay || 3,
+        closeHour: loadedSettings.closeHour || 21,
+        openDay: loadedSettings.openDay || 0,
+        openHour: loadedSettings.openHour || 21
+      };
       originalSettings = { ...settings };
     }
   }
@@ -117,6 +135,10 @@ import { devConfig } from '$lib/devMode.js';
       const result = await response.json();
       
       if (result.success) {
+        // Store the verification code for validation
+        if (result.code) {
+          verificationCode = result.code;
+        }
         showVerification = true;
         success = 'Verification code sent to your email';
       } else {
@@ -130,7 +152,7 @@ import { devConfig } from '$lib/devMode.js';
   }
   
   async function verifyCode() {
-    if (!verificationCode) {
+    if (!inputVerificationCode) {
       error = 'Please enter the verification code';
       return;
     }
@@ -139,9 +161,13 @@ import { devConfig } from '$lib/devMode.js';
     error = '';
     
     try {
-      // In a real implementation, you'd verify the code server-side
-      // For now, we'll accept any 6-digit code for the manager email
-      if (verificationCode.length >= 4 && (devConfig.allowAnyManagerEmail || email === data.managerEmail)) {
+      console.log('Verifying manager code:'); // Debug
+      console.log('  Input code:', inputVerificationCode); // Debug  
+      console.log('  Expected code:', verificationCode); // Debug
+      console.log('  Codes match:', inputVerificationCode === verificationCode); // Debug
+      
+      // Verify the code matches what we received from the API
+      if (inputVerificationCode === verificationCode || (devConfig.allowAnyManagerEmail && inputVerificationCode.length >= 4)) {
         if (setManagerSession(email)) {
           authenticated = true;
           loadCurrentSettings();
@@ -165,6 +191,7 @@ import { devConfig } from '$lib/devMode.js';
     authenticated = false;
     email = '';
     verificationCode = '';
+    inputVerificationCode = '';
     showVerification = false;
     error = '';
     success = '';
@@ -179,12 +206,15 @@ import { devConfig } from '$lib/devMode.js';
       // Update settings locally
       updateBidWindowSettings(settings);
       
+      // Ensure we have the manager email
+      const managerEmail = email || data.managerEmail;
+      
       // Also send to server for logging/validation
       const response = await fetch('/api/manager/bid-window', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
+          email: managerEmail,
           settings
         })
       });
@@ -286,7 +316,7 @@ import { devConfig } from '$lib/devMode.js';
               <input
                 id="code"
                 type="text"
-                bind:value={verificationCode}
+                bind:value={inputVerificationCode}
                 placeholder="Enter verification code"
                 disabled={loading}
                 maxlength="6"
@@ -298,13 +328,13 @@ import { devConfig } from '$lib/devMode.js';
               <button 
                 class="primary-button"
                 on:click={verifyCode}
-                disabled={loading || !verificationCode}
+                disabled={loading || !inputVerificationCode}
               >
                 {loading ? 'Verifying...' : 'Verify Code'}
               </button>
               <button 
                 class="secondary-button"
-                on:click={() => { showVerification = false; verificationCode = ''; }}
+                on:click={() => { showVerification = false; inputVerificationCode = ''; verificationCode = ''; }}
               >
                 Back
               </button>

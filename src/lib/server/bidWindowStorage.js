@@ -42,6 +42,7 @@ export function saveBidWindowSettingsToFile(settings) {
   try {
     const settingsToSave = { ...DEFAULT_SETTINGS, ...settings };
     writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(settingsToSave, null, 2));
+    return true;
   } catch (error) {
     console.error('Error saving bid window settings to file:', error);
     throw error;

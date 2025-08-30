@@ -9,7 +9,7 @@
 import { dev } from '$app/environment';
 
 // Check for DEV_MODE environment variable or if we're in dev environment
-export const isDevMode = true;
+export const isDevMode = false;
 
 // Development settings
 export const devConfig = {
