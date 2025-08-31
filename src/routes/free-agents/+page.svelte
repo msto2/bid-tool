@@ -244,19 +244,8 @@
   // Extract unique positions from all players for filter
   $: availablePositions = [...new Set(allPlayers.map(p => p.position))].sort();
   
-  // Monitor bid window changes and refresh data when status changes
-  let previousWindowAllowed = null;
-  $: {
-    if (typeof window !== 'undefined' && bidWindowStatus && typeof bidWindowStatus.allowed === 'boolean') {
-      // Check if the window status actually changed (not just an update)
-      if (previousWindowAllowed !== null && previousWindowAllowed !== bidWindowStatus.allowed) {
-        console.log('Free agents page: Bid window status changed, refreshing...');
-        // Refresh the page data when bidding window opens/closes
-        window.location.reload();
-      }
-      previousWindowAllowed = bidWindowStatus.allowed;
-    }
-  }
+  // Note: Removed automatic page reload on status change to prevent infinite refresh loops
+  // The timer-based refresh below will handle reloading when the bidding window actually changes
   
   // Monitor time until window change and refresh when it expires
   let lastTimerSetFor = null;
