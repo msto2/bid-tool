@@ -35,6 +35,16 @@ else
             exit 1
         fi
     fi
+    
+    # Check if Luxon (timezone library) is installed
+    if ! npm ls luxon &> /dev/null; then
+        echo "Installing timezone library (Luxon)..."
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to install Luxon timezone library"
+            exit 1
+        fi
+    fi
 fi
 
 # Check if Python dependencies are installed for the API
@@ -128,7 +138,7 @@ SVELTE_PID=$!
 echo
 echo "✓ Both servers are running successfully!"
 echo "- ESPN API Server: http://localhost:8000"
-echo "- SvelteKit Preview: http://localhost:4173"
+echo "- SvelteKit Preview: http://localhost:4172"
 echo
 echo "API Health Check: curl http://localhost:8000/teams"
 echo

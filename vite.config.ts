@@ -11,5 +11,8 @@ export default defineConfig({
 		host: true,
 		port: 4172
 	},
+	ssr: {
+		noExternal: ['luxon']
+	},
 	plugins: [sveltekit()]
 });
