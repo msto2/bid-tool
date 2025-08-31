@@ -3,6 +3,7 @@
   export let onBid;
   export let loadingHistoricalStats = {};
   export let historicalStatsCache = {};
+  export let biddingAllowed = true;
 
   let showBidModal = false;
   let years = 1;
@@ -283,6 +284,21 @@
     transform: scale(1.1);
     box-shadow: 0 5px 20px rgba(16, 185, 129, 0.5);
     background: linear-gradient(135deg, #059669, #047857);
+  }
+  
+  .bidding-closed-indicator {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 
   .player-stats {
@@ -686,7 +702,11 @@
         <div class="player-name">{player.name}</div>
         <div class="player-team">{player.position} • {player.team}</div>
       </div>
-      <button class="add-btn" on:click={openBidModal}>+</button>
+      {#if biddingAllowed}
+        <button class="add-btn" on:click={openBidModal}>+</button>
+      {:else}
+        <div class="bidding-closed-indicator" title="Bidding is currently closed">🔒</div>
+      {/if}
     </div>
 
     <div class="player-stats">

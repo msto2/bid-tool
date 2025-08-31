@@ -46,6 +46,9 @@
       if (revealTimer) {
         clearTimeout(revealTimer);
       }
+      if (windowChangeTimer) {
+        clearTimeout(windowChangeTimer);
+      }
     };
   });
 
@@ -261,6 +264,8 @@
 
   // Additional reactive statement to monitor bid window changes for auto-refresh
   let previousWindowAllowed = null;
+  let windowChangeTimer = null;
+  
   $: {
     if (typeof window !== 'undefined' && bidWindowStatus && typeof bidWindowStatus.allowed === 'boolean') {
       // Check if the window status actually changed (not just an update)
@@ -269,6 +274,29 @@
         refreshBids();
       }
       previousWindowAllowed = bidWindowStatus.allowed;
+    }
+  }
+  
+  // Monitor time until window change and refresh when it expires
+  $: {
+    if (typeof window !== 'undefined' && bidWindowStatus?.timeUntilChange) {
+      // Clear any existing timer
+      if (windowChangeTimer) {
+        clearTimeout(windowChangeTimer);
+        windowChangeTimer = null;
+      }
+      
+      // Calculate milliseconds until window changes
+      const msUntilChange = bidWindowStatus.timeUntilChange.totalSeconds * 1000;
+      
+      // Set timer to refresh when window changes (add 1 second buffer)
+      if (msUntilChange > 0 && msUntilChange < 86400000) { // Only set timer if less than 24 hours
+        windowChangeTimer = setTimeout(() => {
+          console.log('Bids page: Bidding window timer expired, refreshing...');
+          fetchBidWindowStatus();
+          refreshBids();
+        }, msUntilChange + 1000);
+      }
     }
   }
   

@@ -36,6 +36,10 @@
   // Notification system
   let notifications = [];
   let showBidSuccess = false;
+  
+  // Bid window status tracking
+  let bidWindowStatus = { allowed: true };
+  let windowChangeTimer = null;
 
   // Reactive filtering
   $: {
@@ -62,6 +66,7 @@
         }
         
         setupNotifications();
+        fetchBidWindowStatus();
         
         // Pre-populate NFL players cache in background
         fetch('/api/nfl-players').catch(() => {
@@ -79,6 +84,9 @@
     return () => {
       if (eventSource) {
         eventSource.close();
+      }
+      if (windowChangeTimer) {
+        clearTimeout(windowChangeTimer);
       }
     };
   });
@@ -106,8 +114,9 @@
             const { updateBidWindowSettings } = await import('$lib/bidWindow.js');
             updateBidWindowSettings(data.settings);
           }
+          // Fetch updated bid window status
+          fetchBidWindowStatus();
           // The BidWindowStatus component will automatically refresh itself
-          // No additional action needed here as bidding functionality is handled by BidWindowStatus
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
@@ -143,6 +152,23 @@
   
   function removeNotification(id) {
     notifications = notifications.filter(n => n.id !== id);
+  }
+  
+  async function fetchBidWindowStatus() {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const response = await fetch('/api/bid-window');
+      if (response.ok) {
+        const newStatus = await response.json();
+        bidWindowStatus = newStatus;
+        console.log('Free agents page: Fetched bid window status:', bidWindowStatus);
+      } else {
+        console.error('Failed to fetch bid window status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching bid window status:', error);
+    }
   }
 
   function handleSignOut() {
@@ -217,6 +243,44 @@
 
   // Extract unique positions from all players for filter
   $: availablePositions = [...new Set(allPlayers.map(p => p.position))].sort();
+  
+  // Monitor bid window changes and refresh data when status changes
+  let previousWindowAllowed = null;
+  $: {
+    if (typeof window !== 'undefined' && bidWindowStatus && typeof bidWindowStatus.allowed === 'boolean') {
+      // Check if the window status actually changed (not just an update)
+      if (previousWindowAllowed !== null && previousWindowAllowed !== bidWindowStatus.allowed) {
+        console.log('Free agents page: Bid window status changed, refreshing...');
+        // Refresh the page data when bidding window opens/closes
+        window.location.reload();
+      }
+      previousWindowAllowed = bidWindowStatus.allowed;
+    }
+  }
+  
+  // Monitor time until window change and refresh when it expires
+  $: {
+    if (typeof window !== 'undefined' && bidWindowStatus?.timeUntilChange) {
+      // Clear any existing timer
+      if (windowChangeTimer) {
+        clearTimeout(windowChangeTimer);
+        windowChangeTimer = null;
+      }
+      
+      // Calculate milliseconds until window changes
+      const msUntilChange = bidWindowStatus.timeUntilChange.totalSeconds * 1000;
+      
+      // Set timer to refresh when window changes (add 1 second buffer)
+      if (msUntilChange > 0 && msUntilChange < 86400000) { // Only set timer if less than 24 hours
+        windowChangeTimer = setTimeout(() => {
+          console.log('Free agents page: Bidding window timer expired, refreshing...');
+          fetchBidWindowStatus();
+          // Reload the page to refresh all data
+          window.location.reload();
+        }, msUntilChange + 1000);
+      }
+    }
+  }
 </script>
 
 <style>
@@ -550,6 +614,7 @@
           onBid={handlePlayerBid}
           bind:loadingHistoricalStats
           bind:historicalStatsCache
+          biddingAllowed={bidWindowStatus.allowed}
         />
       {/each}
     </div>
