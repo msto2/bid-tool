@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { broadcastToSSEClients } from '$lib/sse.js';
+import { loadBidsFromFile, addBidToFile, removeBidFromFile, clearAllBidsFromFile, saveBidsToFile } from '$lib/server/bidStorage.js';
 
-// In-memory storage for demo purposes
-// In production, this should be replaced with a proper database
-let bidsStorage = [];
+// Load bids from file on server start
+let bidsStorage = loadBidsFromFile();
 
 // Cache for free agents to reduce API calls
 let freeAgentsCache = {
@@ -67,7 +67,13 @@ async function cleanupInvalidBids() {
   const availablePlayerIds = await getCurrentFreeAgents();
   const validBids = bidsStorage.filter(bid => availablePlayerIds.has(bid.playerId));
   const removedCount = bidsStorage.length - validBids.length;
-  bidsStorage = validBids;
+  
+  // Update both in-memory and file storage if any bids were removed
+  if (removedCount > 0) {
+    bidsStorage = validBids;
+    saveBidsToFile(validBids);
+  }
+  
   return removedCount;
 }
 
@@ -107,6 +113,9 @@ function broadcastBidDeletion(bidId) {
 /** @type {import('./$types').RequestHandler} */
 export async function GET() {
 	try {
+		// Load fresh bids from file
+		bidsStorage = loadBidsFromFile();
+		
 		// Clean up invalid bids (players no longer in free agents list)
 		await cleanupInvalidBids();
 		
@@ -150,13 +159,13 @@ export async function POST({ request }) {
 			bid.timestamp = Date.now();
 		}
 		
-		// Find and remove any existing bid from same bidder for same player
-		bidsStorage = bidsStorage.filter(existingBid => 
-			!(existingBid.playerId === bid.playerId && existingBid.bidder.teamId === bid.bidder.teamId)
-		);
+		// Save bid to file (this handles replacing existing bids from same bidder for same player)
+		if (!addBidToFile(bid)) {
+			return json({ error: 'Failed to save bid to file' }, { status: 500 });
+		}
 		
-		// Add the new bid
-		bidsStorage.push(bid);
+		// Update in-memory storage
+		bidsStorage = loadBidsFromFile();
 		
 		// Broadcast bid notification to all connected clients
 		broadcastBidNotification(bid);
@@ -175,9 +184,11 @@ export async function DELETE({ url }) {
 		const clearAll = url.searchParams.get('clear') === 'all';
 		
 		if (clearAll) {
-			// Clear all bids (for weekly reset)
-			const clearedCount = bidsStorage.length;
-			bidsStorage = [];
+			// Clear all bids from file (for weekly reset)
+			const clearedCount = clearAllBidsFromFile();
+			
+			// Update in-memory storage
+			bidsStorage = loadBidsFromFile();
 			
 			// Broadcast that all bids were cleared
 			const notification = {
@@ -199,12 +210,13 @@ export async function DELETE({ url }) {
 			return json({ error: 'Bid ID required' }, { status: 400 });
 		}
 		
-		const initialLength = bidsStorage.length;
-		bidsStorage = bidsStorage.filter(bid => bid.id !== bidId);
-		
-		if (bidsStorage.length === initialLength) {
+		// Remove bid from file
+		if (!removeBidFromFile(bidId)) {
 			return json({ error: 'Bid not found' }, { status: 404 });
 		}
+		
+		// Update in-memory storage
+		bidsStorage = loadBidsFromFile();
 		
 		// Broadcast bid deletion notification to all connected clients
 		broadcastBidDeletion(bidId);
