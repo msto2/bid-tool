@@ -30,6 +30,7 @@
         
         createTeamsMap();
         setupRealTimeUpdates();
+        fetchBidWindowStatus();
       } catch (error) {
         console.log('Error in session check:', error);
         goto('/');
@@ -276,6 +277,34 @@
     updateSortedBids();
   }
   
+  
+  function updateSortedBids() {
+    if (!revealBids || !bids || !Array.isArray(bids)) {
+      sortedBids = [];
+      return;
+    }
+    
+    // Group bids by player name
+    const playerGroups = {};
+    bids.forEach(bid => {
+      const totalSalary = bid.contract.salary * bid.contract.years;
+      
+      if (!playerGroups[bid.playerName]) {
+        playerGroups[bid.playerName] = [];
+      }
+      
+      playerGroups[bid.playerName].push({ ...bid, totalSalary });
+    });
+    
+    // Sort each player group by total salary (highest first)
+    Object.keys(playerGroups).forEach(playerName => {
+      playerGroups[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
+    });
+    
+    // Flatten back to array, maintaining player groupings
+    sortedBids = Object.values(playerGroups).flat();
+  }
+  
   function hideAllBids() {
     revealBids = false;
     revealedIndexes.clear();
@@ -306,32 +335,7 @@
     });
   }
   
-  function updateSortedBids() {
-    if (!revealBids && bids && Array.isArray(bids)) {
-      sortedBids = [];
-      return;
-    }
-    
-    // Group bids by player name
-    const playerGroups = {};
-    bids.forEach(bid => {
-      const totalSalary = bid.contract.salary * bid.contract.years;
-      
-      if (!playerGroups[bid.playerName]) {
-        playerGroups[bid.playerName] = [];
-      }
-      
-      playerGroups[bid.playerName].push({ ...bid, totalSalary });
-    });
-    
-    // Sort each player group by total salary (highest first)
-    Object.keys(playerGroups).forEach(playerName => {
-      playerGroups[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
-    });
-    
-    // Flatten back to array, maintaining player groupings
-    sortedBids = Object.values(playerGroups).flat();
-  }
+
 
 </script>
 
@@ -355,6 +359,10 @@
   .header {
     margin-bottom: 2rem;
     position: relative;
+  }
+
+  .bid-window-section {
+    margin-bottom: 1.5rem;
   }
 
   .header-content {
@@ -389,11 +397,6 @@
     font-size: 0.8rem;
   }
 
-  .team-name {
-    color: #f1f5f9;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
 
   .nav-btn {
     background: rgba(59, 130, 246, 0.1);
@@ -453,6 +456,32 @@
   .bid-count {
     color: #94a3b8;
     font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .history-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    background: rgba(96, 165, 250, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .history-link:hover {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: rgba(96, 165, 250, 0.5);
+  }
+
+  .period-info {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: normal;
   }
 
   .bids-grid {
@@ -497,6 +526,7 @@
     text-transform: uppercase;
     letter-spacing: 0.8px;
   }
+
 
   .bid-card:hover {
     transform: translateY(-1px);
@@ -773,9 +803,8 @@
     </div>
   </div>
 
-  <!-- Bid Window Status -->
-  <div style="margin-bottom: 1.5rem;">
-    <BidWindowStatus compact={false} />
+  <div class="bid-window-section">
+    <BidWindowStatus compact={true} />
   </div>
 
   <div class="actions-bar">

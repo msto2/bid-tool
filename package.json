@@ -46,6 +46,7 @@
 	],
 	"dependencies": {
 		"@getbrevo/brevo": "^3.0.1",
-		"espn-fantasy-football-api": "^2.0.1"
+		"espn-fantasy-football-api": "^2.0.1",
+		"luxon": "^3.7.1"
 	}
 }

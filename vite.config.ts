@@ -7,5 +7,9 @@ export default defineConfig({
 		port: 5173,
 		allowedHosts: ['bids.triplepoint.me']
 	},
+	preview: {
+		host: true,
+		port: 4172
+	},
 	plugins: [sveltekit()]
 });

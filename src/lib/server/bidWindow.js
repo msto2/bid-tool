@@ -2,16 +2,34 @@
  * Server-side bid window utilities that use file-based settings
  */
 
+import { DateTime } from 'luxon';
 import { loadBidWindowSettingsFromFile } from './bidWindowStorage.js';
+
+/**
+ * Get current Eastern Time
+ * @returns {DateTime} Current time in Eastern timezone
+ */
+function getEasternTime() {
+  return DateTime.now().setZone('America/New_York');
+}
+
+/**
+ * Convert a Date object to Eastern Time DateTime
+ * @param {Date} date - Date object to convert
+ * @returns {DateTime} DateTime in Eastern timezone
+ */
+function toEasternTime(date) {
+  return DateTime.fromJSDate(date).setZone('America/New_York');
+}
 
 /**
  * Check if bidding is currently allowed (server-side)
  * @returns {Object} { allowed: boolean, reason: string, nextWindow: Date|null }
  */
 export function isBiddingAllowed() {
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  const hour = now.getHours();
+  const now = getEasternTime();
+  const dayOfWeek = now.weekday === 7 ? 0 : now.weekday; // Convert Luxon weekday (1=Monday, 7=Sunday) to JavaScript (0=Sunday, 1=Monday)
+  const hour = now.hour;
   
   const settings = loadBidWindowSettingsFromFile();
   const { closeDay, closeHour, openDay, openHour } = settings;
@@ -33,16 +51,14 @@ export function isBiddingAllowed() {
     return `${hour12}${ampm}`;
   };
 
-  // Format full date and time
-  const formatDateTime = (date) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                   'July', 'August', 'September', 'October', 'November', 'December'];
+  // Format full date and time (accepts Date or DateTime object)
+  const formatDateTime = (dateInput) => {
+    if (!dateInput) return '';
     
-    const dayName = days[date.getDay()];
-    const monthName = months[date.getMonth()];
-    const dayNum = date.getDate();
-    const hour = date.getHours();
+    // Convert to DateTime if it's a Date object
+    const dateTime = dateInput instanceof Date ? 
+      DateTime.fromJSDate(dateInput).setZone('America/New_York') : 
+      dateInput;
     
     // Add ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
     const getOrdinal = (n) => {
@@ -51,7 +67,12 @@ export function isBiddingAllowed() {
       return n + (s[(v - 20) % 10] || s[v] || s[0]);
     };
     
-    return `${dayName} ${monthName} ${getOrdinal(dayNum)} ${formatHour(hour)}`;
+    const dayName = dateTime.toFormat('cccc'); // Full weekday name
+    const monthName = dateTime.toFormat('MMMM'); // Full month name
+    const dayNum = dateTime.day;
+    const hour = dateTime.hour;
+    
+    return `${dayName} ${monthName} ${getOrdinal(dayNum)} ${formatHour(hour)} EST`;
   };
   
   if (dayOfWeek === closeDay && hour >= closeHour) {
@@ -83,7 +104,7 @@ export function isBiddingAllowed() {
     allowed: !biddingClosed,
     reason: biddingClosed ? reason : openPeriodInfo,
     nextWindow,
-    currentTime: now
+    currentTime: now.toJSDate() // Convert DateTime back to Date for compatibility
   };
 }
 
@@ -129,9 +150,9 @@ function isInClosedPeriod(dayOfWeek, hour) {
  * @returns {Date} Next bidding window opening time
  */
 function getNextBiddingWindow() {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const hour = now.getHours();
+  const now = getEasternTime();
+  const dayOfWeek = now.weekday === 7 ? 0 : now.weekday; // Convert Luxon weekday to JavaScript weekday
+  const hour = now.hour;
   const settings = loadBidWindowSettingsFromFile();
   const { openDay, openHour } = settings;
   
@@ -141,9 +162,8 @@ function getNextBiddingWindow() {
     // It's the open day
     if (hour < openHour) {
       // Before open hour - next window is today at open hour
-      const nextWindow = new Date(now);
-      nextWindow.setHours(openHour, 0, 0, 0);
-      return nextWindow;
+      const nextWindow = now.set({ hour: openHour, minute: 0, second: 0, millisecond: 0 });
+      return nextWindow.toJSDate();
     } else {
       // After open hour - next window is next week at open day/hour
       daysUntilOpen = 7;
@@ -156,11 +176,9 @@ function getNextBiddingWindow() {
   }
   
   // Next window is at open day/hour
-  const nextWindow = new Date(now);
-  nextWindow.setDate(now.getDate() + daysUntilOpen);
-  nextWindow.setHours(openHour, 0, 0, 0);
+  const nextWindow = now.plus({ days: daysUntilOpen }).set({ hour: openHour, minute: 0, second: 0, millisecond: 0 });
   
-  return nextWindow;
+  return nextWindow.toJSDate();
 }
 
 /**
@@ -168,9 +186,9 @@ function getNextBiddingWindow() {
  * @returns {Date} Next bidding window closing time
  */
 function getNextCloseTime() {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const hour = now.getHours();
+  const now = getEasternTime();
+  const dayOfWeek = now.weekday === 7 ? 0 : now.weekday; // Convert Luxon weekday to JavaScript weekday
+  const hour = now.hour;
   const settings = loadBidWindowSettingsFromFile();
   const { closeDay, closeHour } = settings;
   
@@ -180,9 +198,8 @@ function getNextCloseTime() {
     // It's the close day
     if (hour < closeHour) {
       // Before close hour - closes today at close hour
-      const nextClose = new Date(now);
-      nextClose.setHours(closeHour, 0, 0, 0);
-      return nextClose;
+      const nextClose = now.set({ hour: closeHour, minute: 0, second: 0, millisecond: 0 });
+      return nextClose.toJSDate();
     } else {
       // After close hour - next close is next week at close day/hour
       daysUntilClose = 7;
@@ -195,11 +212,9 @@ function getNextCloseTime() {
   }
   
   // Next close is at close day/hour
-  const nextClose = new Date(now);
-  nextClose.setDate(now.getDate() + daysUntilClose);
-  nextClose.setHours(closeHour, 0, 0, 0);
+  const nextClose = now.plus({ days: daysUntilClose }).set({ hour: closeHour, minute: 0, second: 0, millisecond: 0 });
   
-  return nextClose;
+  return nextClose.toJSDate();
 }
 
 /**
@@ -208,7 +223,7 @@ function getNextCloseTime() {
  * @returns {string} Period identifier (YYYY-MM-DD format of the period start)
  */
 export function getCurrentBidPeriod() {
-  const now = new Date();
+  const now = getEasternTime();
   const settings = loadBidWindowSettingsFromFile();
   const { openDay, openHour } = settings;
   
@@ -216,25 +231,21 @@ export function getCurrentBidPeriod() {
   const periodStart = getCurrentPeriodStart(now);
   
   // Format as YYYY-MM-DD for the period identifier
-  const year = periodStart.getFullYear();
-  const month = String(periodStart.getMonth() + 1).padStart(2, '0');
-  const day = String(periodStart.getDate()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
+  return periodStart.toFormat('yyyy-MM-dd');
 }
 
 /**
  * Get the start date of the current bid period
- * @param {Date} currentDate - Current date
- * @returns {Date} Start of current bid period
+ * @param {DateTime} currentDate - Current date (optional)
+ * @returns {DateTime} Start of current bid period
  */
-function getCurrentPeriodStart(currentDate = new Date()) {
+function getCurrentPeriodStart(currentDate = null) {
   const settings = loadBidWindowSettingsFromFile();
   const { openDay, openHour } = settings;
   
-  const now = new Date(currentDate);
-  const dayOfWeek = now.getDay();
-  const hour = now.getHours();
+  const now = currentDate || getEasternTime();
+  const dayOfWeek = now.weekday === 7 ? 0 : now.weekday; // Convert Luxon weekday to JavaScript weekday
+  const hour = now.hour;
   
   // Calculate days back to the most recent open day/hour
   let daysBack;
@@ -255,9 +266,7 @@ function getCurrentPeriodStart(currentDate = new Date()) {
       dayOfWeek + (7 - openDay);
   }
   
-  const periodStart = new Date(now);
-  periodStart.setDate(now.getDate() - daysBack);
-  periodStart.setHours(openHour, 0, 0, 0);
+  const periodStart = now.minus({ days: daysBack }).set({ hour: openHour, minute: 0, second: 0, millisecond: 0 });
   
   return periodStart;
 }
@@ -272,20 +281,16 @@ export function getCurrentBidPeriodRange() {
   
   const periodStart = getCurrentPeriodStart();
   
-  // Calculate the end of this period
-  const periodEnd = new Date(periodStart);
-  
   // Add days to get to close day
   const daysToAdd = closeDay > openDay ? 
     closeDay - openDay : 
     (7 - openDay) + closeDay;
     
-  periodEnd.setDate(periodStart.getDate() + daysToAdd);
-  periodEnd.setHours(closeHour, 0, 0, 0);
+  const periodEnd = periodStart.plus({ days: daysToAdd }).set({ hour: closeHour, minute: 0, second: 0, millisecond: 0 });
   
   return {
-    start: periodStart,
-    end: periodEnd,
+    start: periodStart.toJSDate(),
+    end: periodEnd.toJSDate(),
     periodId: getCurrentBidPeriod()
   };
 }
@@ -296,7 +301,7 @@ export function getCurrentBidPeriodRange() {
  */
 export function getTimeUntilWindowChange() {
   const status = isBiddingAllowed();
-  const now = new Date();
+  const now = getEasternTime();
   
   let targetTime;
   let changeType;
@@ -313,14 +318,16 @@ export function getTimeUntilWindowChange() {
   
   if (!targetTime) return null;
   
-  const timeDiff = targetTime.getTime() - now.getTime();
-  const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+  const targetDateTime = DateTime.fromJSDate(targetTime).setZone('America/New_York');
+  const timeDiff = targetDateTime.diff(now, ['days', 'hours', 'minutes', 'seconds']);
+  
+  const days = Math.floor(timeDiff.days);
+  const hours = Math.floor(timeDiff.hours);
+  const minutes = Math.floor(timeDiff.minutes);  
+  const seconds = Math.floor(timeDiff.seconds);
   
   // Show seconds when under 2 minutes (120 seconds)
-  const totalSeconds = Math.floor(timeDiff / 1000);
+  const totalSeconds = Math.floor(targetDateTime.diff(now, 'seconds').seconds);
   const showSeconds = totalSeconds <= 120 && totalSeconds > 0;
   
   let formattedTime;
@@ -343,7 +350,7 @@ export function getTimeUntilWindowChange() {
     hours,
     minutes,
     seconds,
-    totalMinutes: Math.floor(timeDiff / (1000 * 60)),
+    totalMinutes: Math.floor(targetDateTime.diff(now, 'minutes').minutes),
     totalSeconds,
     showSeconds,
     formattedTime
@@ -360,26 +367,13 @@ export function getBiddingWindowStatus() {
   
   const formatTime = (date) => {
     if (!date) return '';
-    return date.toLocaleString('en-US', {
-      weekday: 'long',
-      month: 'short', 
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+    const easternTime = DateTime.fromJSDate(date).setZone('America/New_York');
+    return easternTime.toLocaleString(DateTime.DATETIME_MED) + ' EST';
   };
 
   // Format full date and time for cycle display
   const formatDateTime = (date) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                   'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    const dayName = days[date.getDay()];
-    const monthName = months[date.getMonth()];
-    const dayNum = date.getDate();
-    const hour = date.getHours();
+    const easternTime = DateTime.fromJSDate(date).setZone('America/New_York');
     
     // Add ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
     const getOrdinal = (n) => {
@@ -394,7 +388,12 @@ export function getBiddingWindowStatus() {
       return `${hour12}${ampm}`;
     };
     
-    return `${dayName} ${monthName} ${getOrdinal(dayNum)} ${formatHour(hour)}`;
+    const dayName = easternTime.toFormat('cccc'); // Full weekday name
+    const monthName = easternTime.toFormat('MMMM'); // Full month name
+    const dayNum = easternTime.day;
+    const hour = easternTime.hour;
+    
+    return `${dayName} ${monthName} ${getOrdinal(dayNum)} ${formatHour(hour)} EST`;
   };
   
   const cycleInfo = `${formatDateTime(periodRange.start)} - ${formatDateTime(periodRange.end)}`;
