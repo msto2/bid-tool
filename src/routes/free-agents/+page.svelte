@@ -259,6 +259,7 @@
   }
   
   // Monitor time until window change and refresh when it expires
+  let lastTimerSetFor = null;
   $: {
     if (typeof window !== 'undefined' && bidWindowStatus?.timeUntilChange) {
       // Clear any existing timer
@@ -270,14 +271,24 @@
       // Calculate milliseconds until window changes
       const msUntilChange = bidWindowStatus.timeUntilChange.totalSeconds * 1000;
       
-      // Set timer to refresh when window changes (add 1 second buffer)
-      if (msUntilChange > 0 && msUntilChange < 86400000) { // Only set timer if less than 24 hours
-        windowChangeTimer = setTimeout(() => {
-          console.log('Free agents page: Bidding window timer expired, refreshing...');
-          fetchBidWindowStatus();
-          // Reload the page to refresh all data
-          window.location.reload();
-        }, msUntilChange + 1000);
+      // Only set a new timer if:
+      // 1. Time until change is positive (not expired)
+      // 2. Time is less than 24 hours
+      // 3. We haven't already set a timer for this exact time
+      if (msUntilChange > 1000 && msUntilChange < 86400000) {
+        // Check if this is a different timer than last time
+        const timerKey = `${bidWindowStatus.timeUntilChange.changeType}-${bidWindowStatus.timeUntilChange.targetTime}`;
+        if (timerKey !== lastTimerSetFor) {
+          lastTimerSetFor = timerKey;
+          windowChangeTimer = setTimeout(() => {
+            console.log('Free agents page: Bidding window timer expired, refreshing...');
+            lastTimerSetFor = null; // Reset so we can set a new timer after refresh
+            fetchBidWindowStatus();
+            // Reload the page to refresh all data
+            window.location.reload();
+          }, msUntilChange + 1000);
+          console.log(`Free agents page: Set timer for ${msUntilChange}ms (${bidWindowStatus.timeUntilChange.formattedTime})`);
+        }
       }
     }
   }
