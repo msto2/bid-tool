@@ -1,0 +1,235 @@
+{
+  "qb": [
+    {
+      "id": 1001,
+      "name": "Justin Fields",
+      "position": "QB",
+      "team": "CHI",
+      "projected_points": 285.5,
+      "projected_avg_points": 16.8,
+      "total_points": 245.3,
+      "avg_points": 15.3,
+      "stats": {
+        "passing": { "yards": 2242, "tds": 17, "ints": 11 },
+        "rushing": { "yards": 834, "tds": 7 }
+      }
+    },
+    {
+      "id": 1002,
+      "name": "Mac Jones",
+      "position": "QB",
+      "team": "NE",
+      "projected_points": 268.2,
+      "projected_avg_points": 15.8,
+      "total_points": 220.1,
+      "avg_points": 13.8,
+      "stats": {
+        "passing": { "yards": 2997, "tds": 22, "ints": 13 },
+        "rushing": { "yards": 44, "tds": 0 }
+      }
+    }
+  ],
+  "rb": [
+    {
+      "id": 2001,
+      "name": "Dameon Pierce",
+      "position": "RB",
+      "team": "HOU",
+      "projected_points": 198.4,
+      "projected_avg_points": 11.7,
+      "total_points": 165.2,
+      "avg_points": 10.3,
+      "stats": {
+        "rushing": { "yards": 939, "tds": 4 },
+        "receiving": { "receptions": 30, "yards": 165, "tds": 1 }
+      }
+    },
+    {
+      "id": 2002,
+      "name": "Khalil Herbert",
+      "position": "RB",
+      "team": "CHI",
+      "projected_points": 156.3,
+      "projected_avg_points": 9.2,
+      "total_points": 128.7,
+      "avg_points": 8.0,
+      "stats": {
+        "rushing": { "yards": 731, "tds": 4 },
+        "receiving": { "receptions": 14, "yards": 96, "tds": 0 }
+      }
+    },
+    {
+      "id": 2003,
+      "name": "Elijah Mitchell",
+      "position": "RB",
+      "team": "SF",
+      "projected_points": 142.8,
+      "projected_avg_points": 8.4,
+      "total_points": 95.4,
+      "avg_points": 7.9,
+      "stats": {
+        "rushing": { "yards": 567, "tds": 3 },
+        "receiving": { "receptions": 8, "yards": 45, "tds": 0 }
+      }
+    }
+  ],
+  "wr": [
+    {
+      "id": 3001,
+      "name": "George Pickens",
+      "position": "WR",
+      "team": "PIT",
+      "projected_points": 178.5,
+      "projected_avg_points": 10.5,
+      "total_points": 145.3,
+      "avg_points": 9.1,
+      "stats": {
+        "receiving": { "receptions": 52, "yards": 801, "tds": 4 }
+      }
+    },
+    {
+      "id": 3002,
+      "name": "Jahan Dotson",
+      "position": "WR",
+      "team": "WAS",
+      "projected_points": 165.2,
+      "projected_avg_points": 9.7,
+      "total_points": 132.8,
+      "avg_points": 8.3,
+      "stats": {
+        "receiving": { "receptions": 35, "yards": 523, "tds": 7 }
+      }
+    },
+    {
+      "id": 3003,
+      "name": "Skyy Moore",
+      "position": "WR",
+      "team": "KC",
+      "projected_points": 148.6,
+      "projected_avg_points": 8.7,
+      "total_points": 98.4,
+      "avg_points": 7.0,
+      "stats": {
+        "receiving": { "receptions": 22, "yards": 250, "tds": 1 }
+      }
+    }
+  ],
+  "te": [
+    {
+      "id": 4001,
+      "name": "Pat Freiermuth",
+      "position": "TE",
+      "team": "PIT",
+      "projected_points": 142.8,
+      "projected_avg_points": 8.4,
+      "total_points": 118.2,
+      "avg_points": 7.4,
+      "stats": {
+        "receiving": { "receptions": 63, "yards": 732, "tds": 2 }
+      }
+    },
+    {
+      "id": 4002,
+      "name": "Tyler Higbee",
+      "position": "TE",
+      "team": "LAR",
+      "projected_points": 128.4,
+      "projected_avg_points": 7.6,
+      "total_points": 105.6,
+      "avg_points": 6.6,
+      "stats": {
+        "receiving": { "receptions": 72, "yards": 620, "tds": 3 }
+      }
+    }
+  ],
+  "k": [
+    {
+      "id": 5001,
+      "name": "Cameron Dicker",
+      "position": "K",
+      "team": "LAC",
+      "projected_points": 138.0,
+      "projected_avg_points": 8.1,
+      "total_points": 115.0,
+      "avg_points": 7.2,
+      "stats": {
+        "kicking": { "fg_made": 24, "fg_att": 28, "xp_made": 35, "xp_att": 36 }
+      }
+    }
+  ],
+  "dt": [
+    {
+      "id": 6001,
+      "name": "Dre'Mont Jones",
+      "position": "DT",
+      "team": "DEN",
+      "projected_points": 98.5,
+      "projected_avg_points": 5.8,
+      "total_points": 82.3,
+      "avg_points": 5.1,
+      "stats": {
+        "defensive": { "tackles": 44, "sacks": 6.5, "ff": 1 }
+      }
+    }
+  ],
+  "de": [
+    {
+      "id": 7001,
+      "name": "Josh Uche",
+      "position": "DE",
+      "team": "NE",
+      "projected_points": 105.2,
+      "projected_avg_points": 6.2,
+      "total_points": 88.4,
+      "avg_points": 5.5,
+      "stats": {
+        "defensive": { "tackles": 27, "sacks": 11.5, "ff": 2 }
+      }
+    }
+  ],
+  "lb": [
+    {
+      "id": 8001,
+      "name": "Deion Jones",
+      "position": "LB",
+      "team": "CLE",
+      "projected_points": 112.3,
+      "projected_avg_points": 6.6,
+      "total_points": 95.2,
+      "avg_points": 5.9,
+      "stats": {
+        "defensive": { "tackles": 78, "sacks": 2, "ints": 1 }
+      }
+    }
+  ],
+  "cb": [
+    {
+      "id": 9001,
+      "name": "Darnay Holmes",
+      "position": "CB",
+      "team": "NYG",
+      "projected_points": 85.6,
+      "projected_avg_points": 5.0,
+      "total_points": 72.3,
+      "avg_points": 4.5,
+      "stats": {
+        "defensive": { "tackles": 44, "ints": 1, "pd": 5 }
+      }
+    }
+  ],
+  "s": [
+    {
+      "id": 10001,
+      "name": "Terrell Edmunds",
+      "position": "S",
+      "team": "PHI",
+      "projected_points": 98.4,
+      "projected_avg_points": 5.8,
+      "total_points": 82.6,
+      "avg_points": 5.2,
+      "stats": {
+        "defensive": { "tackles": 67, "ints": 1, "pd": 4 }
+      }
+    }
+  ]
+}
