@@ -6,7 +6,7 @@ import { isManagerAuthenticated } from '$lib/managerAuth.js';
 let freeAgentsCache = {
   data: new Set(),
   lastUpdated: 0,
-  ttl: 30000 // 30 seconds cache
+  ttl: 3600000 // 1 hour cache (60 minutes * 60 seconds * 1000 milliseconds)
 };
 
 // Function to get current free agents list with caching
