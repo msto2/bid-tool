@@ -62,19 +62,10 @@ async function getCurrentFreeAgents() {
   }
 }
 
-// Function to clean up invalid bids
-async function cleanupInvalidBids() {
+// Function to check if a player is still available (for validation only)
+async function isPlayerAvailable(playerId) {
   const availablePlayerIds = await getCurrentFreeAgents();
-  const validBids = bidsStorage.filter(bid => availablePlayerIds.has(bid.playerId));
-  const removedCount = bidsStorage.length - validBids.length;
-  
-  // Update both in-memory and file storage if any bids were removed
-  if (removedCount > 0) {
-    bidsStorage = validBids;
-    saveBidsToFile(validBids);
-  }
-  
-  return removedCount;
+  return availablePlayerIds.has(playerId);
 }
 
 // Function to broadcast bid notifications to all connected clients
@@ -116,10 +107,8 @@ export async function GET() {
 		// Load fresh bids from file
 		bidsStorage = loadBidsFromFile();
 		
-		// Clean up invalid bids (players no longer in free agents list)
-		await cleanupInvalidBids();
-		
-		// Return all bids sorted by bidder name, then timestamp
+		// Return ALL bids without filtering - preserving historical records
+		// Bids are kept for record-keeping purposes even if players are no longer available
 		const sortedBids = [...bidsStorage].sort((a, b) => {
 			const nameComparison = a.bidder.name.localeCompare(b.bidder.name);
 			if (nameComparison !== 0) return nameComparison;
@@ -144,8 +133,9 @@ export async function POST({ request }) {
 		}
 		
 		// Validate that player is still available in free agents
-		const availablePlayerIds = await getCurrentFreeAgents();
-		if (!availablePlayerIds.has(bid.playerId)) {
+		// This check prevents new bids on unavailable players but doesn't affect existing bids
+		const playerAvailable = await isPlayerAvailable(bid.playerId);
+		if (!playerAvailable) {
 			return json({ error: 'Player is no longer available' }, { status: 400 });
 		}
 		
@@ -154,9 +144,14 @@ export async function POST({ request }) {
 			bid.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
 		}
 		
-		// Add timestamp if not provided
+		// Add timestamp and status if not provided
 		if (!bid.timestamp) {
 			bid.timestamp = Date.now();
+		}
+		
+		// Mark bid as active (for future status tracking)
+		if (!bid.status) {
+			bid.status = 'active';
 		}
 		
 		// Save bid to file (this handles replacing existing bids from same bidder for same player)

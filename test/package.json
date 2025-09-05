@@ -1,0 +1,20 @@
+{
+  "name": "bid-tool-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Test suite for Fantasy Football Bid Tool",
+  "scripts": {
+    "mock-server": "node mock-server.js",
+    "test": "node test-scenarios.js",
+    "test-utils": "node test-utils.js",
+    "test:integration": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vitest": "^0.34.6"
+  }
+}
