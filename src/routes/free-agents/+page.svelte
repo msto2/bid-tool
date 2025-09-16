@@ -577,6 +577,9 @@
         <a href="/bids" class="nav-btn" data-sveltekit-preload-data="hover">
           View Bids
         </a>
+        <a href="/bid-history" class="nav-btn" data-sveltekit-preload-data="hover">
+          History
+        </a>
       </div>
     {/if}
     

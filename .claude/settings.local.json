@@ -10,7 +10,8 @@
       "WebFetch(domain:github.com)",
       "Bash(git push:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

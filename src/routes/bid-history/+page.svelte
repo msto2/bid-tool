@@ -72,7 +72,7 @@
     {:else}
       <div class="stats-bar">
         <div class="stat">
-          <span class="stat-label">Total Bids:</span>
+          <span class="stat-label">Historical Bids:</span>
           <span class="stat-value">{data.totalBids}</span>
         </div>
         {#if data.lastUpdated}
@@ -81,50 +81,21 @@
             <span class="stat-value">{formatDate(data.lastUpdated)}</span>
           </div>
         {/if}
+        <div class="stat">
+          <span class="stat-label">Note:</span>
+          <span class="stat-value" style="font-size: 0.9rem; color: #94a3b8;">Current window bids shown on Bids page</span>
+        </div>
       </div>
 
       {#if data.bids.length === 0}
         <div class="empty-state">
-          <h2>No Bid History</h2>
-          <p>No bids have been recorded yet. Start bidding to see history here!</p>
-          <a href="/free-agents" class="primary-button">Browse Free Agents</a>
+          <h2>No Historical Bids</h2>
+          <p>No bids from previous bidding windows. Current window bids are shown on the Bids page.</p>
+          <a href="/bids" class="primary-button">View Current Bids</a>
         </div>
       {:else}
         <div class="history-section">
           <h2>All Bids ({data.totalBids})</h2>
-          
-          <div class="bids-grid">
-            {#each data.bids as bid (bid.id)}
-              <div class="bid-card">
-                <div class="bid-header">
-                  <div class="player-info">
-                    <h3 class="player-name">{bid.playerName}</h3>
-                    <span class="player-position">{bid.position || 'N/A'}</span>
-                  </div>
-                  <div class="bid-time">
-                    {formatDate(bid.timestamp)}
-                  </div>
-                </div>
-                
-                <div class="bid-details">
-                  <div class="bidder">
-                    <span class="label">Bidder:</span>
-                    <span class="value">{bid.bidder.name}</span>
-                  </div>
-                  
-                  <div class="contract">
-                    <span class="label">Contract:</span>
-                    <span class="value">{formatContract(bid.contract)}</span>
-                  </div>
-                  
-                  <div class="bid-id">
-                    <span class="label">Bid ID:</span>
-                    <span class="value">{bid.id.slice(0, 8)}...</span>
-                  </div>
-                </div>
-              </div>
-            {/each}
-          </div>
         </div>
 
         <div class="grouped-section">

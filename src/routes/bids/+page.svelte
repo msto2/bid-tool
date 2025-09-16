@@ -19,15 +19,15 @@
       try {
         // Clear old deployment data first
         checkAndClearOldAuth();
-        
+
         // Get current signed in team
         signedInTeam = getSignedInTeam();
-        
+
         if (!signedInTeam) {
           goto('/');
           return;
         }
-        
+
         createTeamsMap();
         setupRealTimeUpdates();
         fetchBidWindowStatus();
@@ -37,7 +37,7 @@
         return;
       }
     }
-    
+
     // Cleanup on component destroy
     return () => {
       if (eventSource) {
@@ -182,10 +182,11 @@
 
   // Get bid window status from server
   let bidWindowStatus = { allowed: true };
-  
+  let currentPeriodRange = null;
+
   async function fetchBidWindowStatus() {
     if (typeof window === 'undefined') return;
-    
+
     try {
       console.log('Fetching bid window status...');
       const response = await fetch('/api/bid-window');
@@ -193,12 +194,44 @@
         const newStatus = await response.json();
         console.log('Received bid window status:', newStatus);
         bidWindowStatus = newStatus;
+
+        // Store the current period range for filtering
+        if (newStatus.periodRange) {
+          currentPeriodRange = newStatus.periodRange;
+        }
       } else {
         console.error('Failed to fetch bid window status:', response.status);
       }
     } catch (error) {
       console.error('Error fetching bid window status:', error);
     }
+  }
+
+  // Check if a bid was placed within the current bidding window
+  function isBidInCurrentWindow(bid) {
+    if (!currentPeriodRange || !bid.timestamp) return false;
+
+    const bidTime = new Date(bid.timestamp);
+    const periodStart = new Date(currentPeriodRange.start);
+    const periodEnd = new Date(currentPeriodRange.end);
+
+    const isInWindow = bidTime >= periodStart && bidTime <= periodEnd;
+
+    // Debug Jake Elliott specifically
+    if (bid.playerName === 'Jake Elliott') {
+      console.log('🏈 Jake Elliott bid check:', {
+        playerName: bid.playerName,
+        timestamp: bid.timestamp,
+        bidTime: bidTime.toISOString(),
+        periodStart: periodStart.toISOString(),
+        periodEnd: periodEnd.toISOString(),
+        isAfterStart: bidTime >= periodStart,
+        isBeforeEnd: bidTime <= periodEnd,
+        isInWindow
+      });
+    }
+
+    return isInWindow;
   }
   
   function isInRevealWindow(status = bidWindowStatus) {
@@ -238,6 +271,10 @@
   let sortedBids = [];
   let revealedIndexes = new Set();
   let revealTimer = null;
+
+  // Filter bids to only show those from the current window
+  let currentWindowBids = [];
+  $: currentWindowBids = bids.filter(bid => isBidInCurrentWindow(bid));
   
   // Simplified reveal state management - make sure it reacts to bidWindowStatus changes
   $: shouldReveal = isInRevealWindow(bidWindowStatus);
@@ -312,34 +349,34 @@
   }
   
   // Update sorted bids when bids change and we're in reveal mode
-  $: if (revealBids && bids && Array.isArray(bids)) {
+  $: if (revealBids && currentWindowBids && Array.isArray(currentWindowBids)) {
     updateSortedBids();
   }
-  
-  
+
+
   function updateSortedBids() {
-    if (!revealBids || !bids || !Array.isArray(bids)) {
+    if (!revealBids || !currentWindowBids || !Array.isArray(currentWindowBids)) {
       sortedBids = [];
       return;
     }
-    
+
     // Group bids by player name
     const playerGroups = {};
-    bids.forEach(bid => {
+    currentWindowBids.forEach(bid => {
       const totalSalary = bid.contract.salary * bid.contract.years;
-      
+
       if (!playerGroups[bid.playerName]) {
         playerGroups[bid.playerName] = [];
       }
-      
+
       playerGroups[bid.playerName].push({ ...bid, totalSalary });
     });
-    
+
     // Sort each player group by total salary (highest first)
     Object.keys(playerGroups).forEach(playerName => {
       playerGroups[playerName].sort((a, b) => b.totalSalary - a.totalSalary);
     });
-    
+
     // Flatten back to array, maintaining player groupings
     sortedBids = Object.values(playerGroups).flat();
   }
@@ -833,6 +870,9 @@
         <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
           Free Agents
         </a>
+        <a href="/bid-history" class="nav-btn" data-sveltekit-preload-data="hover">
+          History
+        </a>
       </div>
     {/if}
     
@@ -848,14 +888,14 @@
 
   <div class="actions-bar">
     <div class="bid-count">
-      {bids.length} {bids.length === 1 ? 'bid' : 'bids'} submitted
+      {currentWindowBids.length} {currentWindowBids.length === 1 ? 'bid' : 'bids'} submitted
     </div>
     <a href="/free-agents" class="nav-btn" data-sveltekit-preload-data="hover">
       + Place New Bid
     </a>
   </div>
 
-  {#if bids.length > 0}
+  {#if currentWindowBids.length > 0}
     <!-- Header Row (Desktop Only) -->
     <div class="bids-header">
       <div class="header-label">User Name</div>
@@ -868,7 +908,7 @@
     </div>
 
     <div class="bids-grid">
-      {#each (revealBids ? sortedBids : bids) as bid, index}
+      {#each (revealBids ? sortedBids : currentWindowBids) as bid, index}
         {@const isRevealed = !revealBids || revealedIndexes.has(index)}
         {@const showPlayerHeader = revealBids && (index === 0 || (sortedBids[index-1] && sortedBids[index-1].playerName !== bid.playerName))}
         
