@@ -242,14 +242,29 @@ export function getCurrentBidPeriod() {
 function getCurrentPeriodStart(currentDate = null) {
   const settings = loadBidWindowSettingsFromFile();
   const { openDay, openHour } = settings;
-  
+
   const now = currentDate || getEasternTime();
-  const dayOfWeek = now.weekday === 7 ? 0 : now.weekday; // Convert Luxon weekday to JavaScript weekday
+
+  // The issue is Luxon's weekday is off when it's late Sunday evening in EST but Monday in UTC
+  // We need to check what day it actually is in Eastern timezone
+  // Use the date's local representation to determine the actual day
+
+  // Get the year, month, and day in Eastern timezone
+  const year = now.year;
+  const month = now.month;
+  const day = now.day;
+
+  // Create a new date at noon Eastern (to avoid edge cases) and get its weekday
+  const noonEastern = DateTime.fromObject({ year, month, day, hour: 12 }, { zone: 'America/New_York' });
+  const actualWeekday = noonEastern.weekday; // 1=Monday, 7=Sunday in Luxon
+
+  // Convert Luxon weekday to JavaScript weekday (0=Sunday)
+  const dayOfWeek = actualWeekday === 7 ? 0 : actualWeekday;
   const hour = now.hour;
-  
+
   // Calculate days back to the most recent open day/hour
   let daysBack;
-  
+
   if (dayOfWeek === openDay) {
     // It's the open day
     if (hour >= openHour) {
@@ -261,13 +276,13 @@ function getCurrentPeriodStart(currentDate = null) {
     }
   } else {
     // Calculate days back to most recent open day
-    daysBack = dayOfWeek > openDay ? 
-      dayOfWeek - openDay : 
+    daysBack = dayOfWeek > openDay ?
+      dayOfWeek - openDay :
       dayOfWeek + (7 - openDay);
   }
-  
+
   const periodStart = now.minus({ days: daysBack }).set({ hour: openHour, minute: 0, second: 0, millisecond: 0 });
-  
+
   return periodStart;
 }
 
