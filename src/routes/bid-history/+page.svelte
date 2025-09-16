@@ -94,10 +94,6 @@
           <a href="/bids" class="primary-button">View Current Bids</a>
         </div>
       {:else}
-        <div class="history-section">
-          <h2>All Bids ({data.totalBids})</h2>
-        </div>
-
         <div class="grouped-section">
           <h2>By Player ({groupedBids.length} players)</h2>
           
