@@ -27,7 +27,6 @@
           goto('/');
           return;
         }
-
         createTeamsMap();
         setupRealTimeUpdates();
         fetchBidWindowStatus();
@@ -173,9 +172,9 @@
   // Reactive function that updates when signedInTeam changes
   $: canDeleteBid = (bid) => {
     if (!signedInTeam || !bid || !bid.bidder) return false;
-    console.log('Checking delete permissions:', { 
-      signedInTeam: signedInTeam?.id, 
-      bidderTeamId: bid.bidder.teamId 
+    console.log('Checking delete permissions:', {
+      signedInTeam: signedInTeam?.id,
+      bidderTeamId: bid.bidder.teamId
     });
     return signedInTeam.id === bid.bidder.teamId;
   };
@@ -198,37 +197,40 @@
         // Store the current period range for filtering
         if (newStatus.periodRange) {
           currentPeriodRange = newStatus.periodRange;
+          console.log('Current period:', {
+            start: new Date(currentPeriodRange.start).toLocaleString(),
+            end: new Date(currentPeriodRange.end).toLocaleString()
+          });
         }
+
+        // Mark loading as complete
+        isLoadingBidWindow = false;
       } else {
         console.error('Failed to fetch bid window status:', response.status);
+        isLoadingBidWindow = false;
       }
     } catch (error) {
       console.error('Error fetching bid window status:', error);
+      isLoadingBidWindow = false;
     }
   }
 
   // Check if a bid was placed within the current bidding window
   function isBidInCurrentWindow(bid) {
-    if (!currentPeriodRange || !bid.timestamp) return false;
+    // If we don't have the period range yet or no bid window status, don't show the bid
+    if (!currentPeriodRange || !bidWindowStatus?.settings) return false;
+
+    if (!bid.timestamp) return false;
 
     const bidTime = new Date(bid.timestamp);
     const periodStart = new Date(currentPeriodRange.start);
     const periodEnd = new Date(currentPeriodRange.end);
 
+    // Check if the bid timestamp falls within the current bidding window
     const isInWindow = bidTime >= periodStart && bidTime <= periodEnd;
 
-    // Debug Jake Elliott specifically
-    if (bid.playerName === 'Jake Elliott') {
-      console.log('🏈 Jake Elliott bid check:', {
-        playerName: bid.playerName,
-        timestamp: bid.timestamp,
-        bidTime: bidTime.toISOString(),
-        periodStart: periodStart.toISOString(),
-        periodEnd: periodEnd.toISOString(),
-        isAfterStart: bidTime >= periodStart,
-        isBeforeEnd: bidTime <= periodEnd,
-        isInWindow
-      });
+    if (!isInWindow) {
+      console.log(`Hiding bid for ${bid.playerName} - timestamp ${bid.timestamp} is outside current window`);
     }
 
     return isInWindow;
@@ -237,17 +239,17 @@
   function isInRevealWindow(status = bidWindowStatus) {
     // Only run on client-side
     if (typeof window === 'undefined') return false;
-    
+
     // Make sure we have a valid bidWindowStatus object with the required property
     if (!status || typeof status.allowed !== 'boolean') {
       console.log('Bid window status not ready yet:', status);
       return false;
     }
-    
+
     // Reveal bids when bidding window is closed (bids should be hidden when bidding is open)
     const shouldReveal = !status.allowed;
-    console.log('Bid reveal check:', { 
-      bidWindowAllowed: status.allowed, 
+    console.log('Bid reveal check:', {
+      bidWindowAllowed: status.allowed,
       shouldReveal: shouldReveal,
       bidWindowStatus: status,
       'typeof bidWindowStatus': typeof status,
@@ -274,7 +276,18 @@
 
   // Filter bids to only show those from the current window
   let currentWindowBids = [];
-  $: currentWindowBids = bids.filter(bid => isBidInCurrentWindow(bid));
+  let isLoadingBidWindow = true;
+
+  $: {
+    // If we're still loading the bid window status, show an empty list
+    // Once loaded, filter to only show bids from the current window
+    if (isLoadingBidWindow) {
+      currentWindowBids = [];
+    } else {
+      currentWindowBids = bids.filter(bid => isBidInCurrentWindow(bid));
+      console.log(`Filtered ${bids.length} bids to ${currentWindowBids.length} in current window`);
+    }
+  }
   
   // Simplified reveal state management - make sure it reacts to bidWindowStatus changes
   $: shouldReveal = isInRevealWindow(bidWindowStatus);
@@ -287,7 +300,7 @@
       bidWindowStatus,
       'bidWindowStatus.allowed': bidWindowStatus.allowed
     });
-    
+
     if (shouldReveal && !revealBids) {
       // Just entered reveal window - trigger animation
       console.log('Bids: Entering reveal window - triggering animation');
