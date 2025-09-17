@@ -29,7 +29,10 @@ def get_teams():
             "team_name": team.team_name,
             "wins": team.wins,
             "losses": team.losses,
-            "id": team.team_id
+            "ties": team.ties,
+            "id": team.team_id,
+            "points_for": team.points_for,
+            "division_id": team.division_id
         }
         for team in league.teams
     ]

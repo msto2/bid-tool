@@ -178,10 +178,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(30, 41, 59, 0.8);
     padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
     font-size: 0.8rem;
   }
 
@@ -256,6 +253,34 @@
   .league-info {
     color: #64748b;
     font-size: 0.9rem;
+  }
+
+  .divisions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+
+  .division-column {
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .division-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #60a5fa;
+    margin: 0 2rem 1.5rem 2rem;
+    text-align: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(96, 165, 250, 0.3);
+  }
+
+  .division-teams {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 
   .teams-grid {
@@ -601,6 +626,11 @@
       justify-content: center;
     }
 
+    .divisions-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
     .teams-grid {
       grid-template-columns: 1fr;
       gap: 1rem;
@@ -657,25 +687,39 @@
   
 
   {#if teams && teams.length > 0}
-    <div class="teams-grid">
-      {#each teams as team}
-        <button class="team-card" on:click={() => handleTeamClick(team)}>
-          <div class="team-header">
-            <div>
-              <h2 class="team-name card-title">{team.team_name}</h2>
-              <div class="team-record">
-                <div class="record-item">
-                  <div class="record-label">Record</div>
-                  <div class="record-value">{team.wins}-{team.losses}</div>
+    {@const teamsByDivision = teams.reduce((acc, team) => {
+      const divId = team.division_id || 0;
+      if (!acc[divId]) acc[divId] = [];
+      acc[divId].push(team);
+      return acc;
+    }, {})}
+
+    <div class="divisions-grid">
+      {#each Object.entries(teamsByDivision).sort(([a], [b]) => Number(a) - Number(b)) as [divisionId, divisionTeams]}
+        <div class="division-column">
+          <h3 class="division-title">{Number(divisionId) === 0 ? 'AFC' : 'NFC'}</h3>
+          <div class="division-teams">
+            {#each divisionTeams.sort((a, b) => (b.points_for || 0) - (a.points_for || 0)) as team}
+              <button class="team-card" on:click={() => handleTeamClick(team)}>
+                <div class="team-header">
+                  <div>
+                    <h2 class="team-name card-title">{team.team_name}</h2>
+                    <div class="team-record">
+                      <div class="record-item">
+                        <div class="record-label">Record</div>
+                        <div class="record-value">{team.wins}-{team.losses}-{team.ties}</div>
+                      </div>
+                      <div class="record-item">
+                        <div class="record-label">Points</div>
+                        <div class="record-value wins">{team.points_for ?? 0}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="record-item">
-                  <div class="record-label">Points</div>
-                  <div class="record-value wins">{team.points_for ?? 0}</div>
-                </div>
-              </div>
-            </div>
+              </button>
+            {/each}
           </div>
-        </button>
+        </div>
       {/each}
     </div>
   {:else}
