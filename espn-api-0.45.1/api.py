@@ -16,12 +16,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 LEAGUE_ID = 3925
-YEAR = 2025
+YEAR = 2026
 
 @app.get("/teams")
 def get_teams():
     league_id = 3925
-    year = 2025
+    year = 2026
     league = League(league_id=league_id, year=year)
 
     teams = [
@@ -41,7 +41,7 @@ def get_teams():
 @app.get("/playerinfo")
 def get_player_info(playerId: int = None):
     league_id = 3925
-    year = 2025
+    year = 2026
     league = League(league_id=league_id, year=year)
 
     if not playerId:
@@ -78,7 +78,7 @@ def get_player_info(playerId: int = None):
 @app.get("/free-agents")
 def get_free_agents():
     league_id = 3925
-    year = 2025
+    year = 2026
     league = League(league_id=league_id, year=year)
 
     free_agents = league.free_agents()
