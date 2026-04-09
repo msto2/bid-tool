@@ -2,7 +2,7 @@ from espn_api.football import League
 
 # Replace these values
 league_id = 3925
-year = 2025
+year = 2026
 # espn_s2 = 'your_espn_s2_cookie'
 # swid = '{your_swid}'  # Include curly braces
 

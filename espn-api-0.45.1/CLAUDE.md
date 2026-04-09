@@ -10,7 +10,7 @@ This is a FastAPI backend that serves as a bridge between the ESPN Fantasy Footb
 
 ### Configuration
 - **League ID**: 3925 (Aliquippa Keeper League)
-- **Current Year**: 2025
+- **Current Year**: 2026
 - **Base URL**: http://localhost:8000
 
 ### Core Dependencies

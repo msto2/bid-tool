@@ -681,7 +681,7 @@
     <div class="header-content">
       <h1 class="main-title">Aliquippa Keeper League</h1>
       <p class="subtitle">Choose your team to get started</p>
-      <p class="league-info">League ID: 3925 • Season: 2025</p>
+      <p class="league-info">League ID: 3925 • Season: 2026</p>
     </div>
   </div>
   
